@@ -106,7 +106,7 @@ Submitted to **Colosseum Frontier 2026**:
 
 ## Team
 
-[@StarkIndustries](https://x.com/StarkIndustries) — Builder — Nigeria  
+[@IamHarrie](https://x.com/IamHarrie) — Builder
 GitHub: [IamHarrie-Labs](https://github.com/IamHarrie-Labs)
 
 ---
