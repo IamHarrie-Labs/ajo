@@ -130,7 +130,7 @@ export default function Landing({ onConnect, theme, onThemeToggle }: LandingProp
               <p className="lp-sub">
                 Circles brings the trusted ajo and susu savings model onchain. Pool USDC with people you
                 trust, contribute each round, and receive your payout when it&apos;s your turn. Defaulters
-                lose their collateral by member vote — no chasing, no spreadsheets, no broken promises.
+                lose their collateral by member vote. No chasing, no spreadsheets, no broken promises.
               </p>
               <div className="lp-cta">
                 <button className="btn btn-primary btn-lg" onClick={() => startConnect('phone')}>

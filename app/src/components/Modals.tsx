@@ -39,9 +39,25 @@ export function ContributeModal({ pool, wallet, onClose, onDone }: ContributeMod
         setTxSig(sig);
         setStep('sent');
         setTimeout(() => { setStep('done'); setTimeout(() => onDone(pool, amount), 800); }, 1200);
-      } catch (err: unknown) {
-        setErrMsg(err instanceof Error ? err.message : 'Unknown error');
-        setStep('error');
+      } catch (mbErr: unknown) {
+        // MagicBlock API unavailable — fall back to a real on-chain Anchor
+        // contribute so the user's USDC still moves (just without TEE privacy).
+        if (onchain) {
+          try {
+            setStep('signing');
+            const sig = await txContribute(sender, onchain, vault);
+            setTxSig(sig);
+            setStep('sent');
+            setTimeout(() => { setStep('done'); setTimeout(() => onDone(pool, amount), 800); }, 1200);
+          } catch (anchorErr: unknown) {
+            setErrMsg(anchorErr instanceof Error ? anchorErr.message : 'Transaction failed');
+            setStep('error');
+          }
+        } else {
+          // Mock pool with no real vault — surface the MagicBlock error
+          setErrMsg(mbErr instanceof Error ? mbErr.message : 'MagicBlock error');
+          setStep('error');
+        }
       }
       return;
     }
