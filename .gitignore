@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+yarn.lock
+package-lock.json
+
+# Rust build artifacts
+/target
+**/target/
+Cargo.lock
+
+# Anchor build output
+**/.anchor/
+
+# IDL
+idl/
+
+# Environment
+.env.local
+.env
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Solana
+.anchor/
+dist/
+
+# Build artifacts
+*.o
+*.so
+*.a
+
+# Claude Code session files
+.claude/
+claude-session.jsonl
+
+# Wallet keypairs — NEVER commit private keys
+circles-authority-wallet.json
+circles-authority-key.txt
+*.keypair.json
+
+# Next.js build output
+app/.next/

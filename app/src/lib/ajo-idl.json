@@ -1,0 +1,966 @@
+{
+  "address": "7Ph9x6WSP51QASW1YuUU5zTYuurmRJhQsifXSj7xT3E4",
+  "metadata": {
+    "name": "ajo",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Trustless rotating savings protocol on Solana"
+  },
+  "instructions": [
+    {
+      "name": "claim_slashed_funds",
+      "discriminator": [
+        53,
+        163,
+        157,
+        85,
+        104,
+        220,
+        105,
+        17
+      ],
+      "accounts": [
+        {
+          "name": "claimant",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "pool_vault",
+          "writable": true
+        },
+        {
+          "name": "claimant_token_account",
+          "writable": true
+        },
+        {
+          "name": "claim_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "claimant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "contribute",
+      "discriminator": [
+        82,
+        33,
+        68,
+        131,
+        32,
+        0,
+        205,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "member",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "member_token_account",
+          "writable": true
+        },
+        {
+          "name": "pool_vault",
+          "writable": true
+        },
+        {
+          "name": "member_reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "member"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_pool",
+      "discriminator": [
+        233,
+        146,
+        209,
+        142,
+        207,
+        104,
+        64,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "pool_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "pool_id",
+          "type": "u64"
+        },
+        {
+          "name": "members",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "contribution_amount",
+          "type": "u64"
+        },
+        {
+          "name": "duration_days",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "execute_payout",
+      "discriminator": [
+        12,
+        35,
+        52,
+        7,
+        95,
+        19,
+        169,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "pool_vault",
+          "writable": true
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "recipient_reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.members [pool.current_recipient_idx as usize]",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "vote_slash",
+      "discriminator": [
+        222,
+        209,
+        102,
+        88,
+        182,
+        162,
+        73,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "voter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "voting_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "arg",
+                "path": "target_member"
+              },
+              {
+                "kind": "account",
+                "path": "pool.current_round",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "target_reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "target_member"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_member",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ClaimRecord",
+      "discriminator": [
+        57,
+        229,
+        0,
+        9,
+        65,
+        62,
+        96,
+        7
+      ]
+    },
+    {
+      "name": "MemberReputation",
+      "discriminator": [
+        60,
+        164,
+        124,
+        102,
+        159,
+        150,
+        229,
+        34
+      ]
+    },
+    {
+      "name": "Pool",
+      "discriminator": [
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
+      ]
+    },
+    {
+      "name": "VotingRecord",
+      "discriminator": [
+        77,
+        198,
+        181,
+        220,
+        227,
+        129,
+        26,
+        198
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "MemberContributed",
+      "discriminator": [
+        230,
+        216,
+        131,
+        107,
+        91,
+        1,
+        156,
+        201
+      ]
+    },
+    {
+      "name": "MemberSlashed",
+      "discriminator": [
+        124,
+        72,
+        4,
+        248,
+        87,
+        145,
+        200,
+        136
+      ]
+    },
+    {
+      "name": "PayoutExecuted",
+      "discriminator": [
+        88,
+        83,
+        101,
+        64,
+        188,
+        233,
+        117,
+        185
+      ]
+    },
+    {
+      "name": "PoolCreated",
+      "discriminator": [
+        202,
+        44,
+        41,
+        88,
+        104,
+        220,
+        157,
+        82
+      ]
+    },
+    {
+      "name": "SlashedFundsClaimed",
+      "discriminator": [
+        219,
+        81,
+        104,
+        18,
+        108,
+        72,
+        29,
+        19
+      ]
+    },
+    {
+      "name": "VoteCast",
+      "discriminator": [
+        39,
+        53,
+        195,
+        104,
+        188,
+        17,
+        225,
+        213
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMemberCount",
+      "msg": "Pool must have between 2 and 10 members"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidAmount",
+      "msg": "Contribution amount must be greater than zero"
+    },
+    {
+      "code": 6002,
+      "name": "NotAMember",
+      "msg": "Caller is not a member of this pool"
+    },
+    {
+      "code": 6003,
+      "name": "AlreadyContributed",
+      "msg": "Member has already contributed this round"
+    },
+    {
+      "code": 6004,
+      "name": "NotAllContributed",
+      "msg": "Not all members have contributed yet"
+    },
+    {
+      "code": 6005,
+      "name": "PoolNotActive",
+      "msg": "Pool is not active"
+    },
+    {
+      "code": 6006,
+      "name": "PoolComplete",
+      "msg": "Pool is already complete"
+    },
+    {
+      "code": 6007,
+      "name": "DuplicateMembers",
+      "msg": "Duplicate members not allowed"
+    },
+    {
+      "code": 6008,
+      "name": "AlreadyVoted",
+      "msg": "Already voted in this round"
+    },
+    {
+      "code": 6009,
+      "name": "VoteAlreadyExecuted",
+      "msg": "Voting already executed"
+    },
+    {
+      "code": 6010,
+      "name": "ThresholdNotMet",
+      "msg": "Slashing threshold not reached"
+    },
+    {
+      "code": 6011,
+      "name": "NoSlashedFunds",
+      "msg": "No slashed funds to claim"
+    },
+    {
+      "code": 6012,
+      "name": "AlreadyClaimed",
+      "msg": "Funds already claimed"
+    },
+    {
+      "code": 6013,
+      "name": "WrongRound",
+      "msg": "Wrong round for this vote"
+    },
+    {
+      "code": 6014,
+      "name": "RecipientMismatch",
+      "msg": "Recipient mismatch"
+    }
+  ],
+  "types": [
+    {
+      "name": "ClaimRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimant",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MemberContributed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "member",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u32"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MemberReputation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "pools_joined",
+            "type": "u32"
+          },
+          {
+            "name": "pools_completed",
+            "type": "u32"
+          },
+          {
+            "name": "defaults",
+            "type": "u32"
+          },
+          {
+            "name": "total_contributed",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MemberSlashed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u32"
+          },
+          {
+            "name": "vote_count",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PayoutExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u32"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Pool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool_id",
+            "type": "u64"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "members",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "contribution_amount",
+            "type": "u64"
+          },
+          {
+            "name": "current_round",
+            "type": "u32"
+          },
+          {
+            "name": "current_recipient_idx",
+            "type": "u32"
+          },
+          {
+            "name": "pool_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "PoolStatus"
+              }
+            }
+          },
+          {
+            "name": "usdc_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "contributions_this_round",
+            "type": {
+              "vec": "bool"
+            }
+          },
+          {
+            "name": "defaulted_members",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "slashed_amount",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "member_count",
+            "type": "u32"
+          },
+          {
+            "name": "contribution_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Completed"
+          },
+          {
+            "name": "Defaulted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SlashedFundsClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimant",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoteCast",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "voter",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u32"
+          },
+          {
+            "name": "current_votes",
+            "type": "u32"
+          },
+          {
+            "name": "threshold",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VotingRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_member",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u32"
+          },
+          {
+            "name": "voters",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "vote_count",
+            "type": "u32"
+          },
+          {
+            "name": "threshold",
+            "type": "u32"
+          },
+          {
+            "name": "executed",
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

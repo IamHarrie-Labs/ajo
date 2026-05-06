@@ -1,0 +1,9 @@
+# Workspace cargo config — fixes MSVC linker on Windows without Visual Studio.
+# Uses a wrapper around lld-link from Solana platform-tools.
+# The wrapper always injects crt_stubs.lib + type_info_stub.lib.
+
+[target.x86_64-pc-windows-msvc]
+linker = "C:/Users/IamHarrie/.xwin-local/lld-link-wrapper.cmd"
+rustflags = [
+    "-C", "link-arg=/LIBPATH:C:\\Users\\IamHarrie\\.xwin-local\\lib",
+]

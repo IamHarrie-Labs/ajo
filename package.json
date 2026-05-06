@@ -1,0 +1,19 @@
+{
+  "name": "ajo",
+  "version": "0.1.0",
+  "description": "Trustless rotating savings protocol on Solana",
+  "private": true,
+  "workspaces": [
+    "app"
+  ],
+  "scripts": {
+    "dev": "npm -w app run dev",
+    "build": "npm -w app run build",
+    "anchor:build": "anchor build",
+    "anchor:test": "anchor test",
+    "anchor:deploy": "anchor deploy --provider.cluster devnet"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
