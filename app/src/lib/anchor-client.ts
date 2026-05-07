@@ -122,6 +122,24 @@ function makeProgram(walletFullAddr: string): Program {
   return new Program(IDL as any, provider);
 }
 
+// ─── USDC balance ─────────────────────────────────────────────────────────────
+
+/**
+ * Returns the wallet's devnet USDC balance in UI units (6-decimal adjusted).
+ * Returns 0 if the token account doesn't exist yet or any error occurs.
+ */
+export async function fetchUsdcBalance(walletAddress: string): Promise<number> {
+  try {
+    const connection = new Connection(RPC, 'confirmed');
+    const owner = new PublicKey(walletAddress);
+    const tokenAccount = ata(USDC_MINT, owner);
+    const balance = await connection.getTokenAccountBalance(tokenAccount);
+    return balance.value.uiAmount ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 // ─── On-chain pool data ────────────────────────────────────────────────────────
 
 export interface OnchainPool {

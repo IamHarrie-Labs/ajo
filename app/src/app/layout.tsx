@@ -4,8 +4,12 @@ import '../styles/design-system.css';
 import '../styles/landing.css';
 
 export const metadata: Metadata = {
-  title: 'Circles — Rotating savings on Solana',
+  title: 'Circles',
   description: 'Trustless rotating savings circles (ajo / susu / tontine) powered by Solana. Pool USDC with people you trust, onchain.',
+  icons: {
+    // Logo mark: solid circle with green offset dot — matches Logo.tsx
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><circle cx='20' cy='20' r='19' fill='%231a1a1a'/><circle cx='24' cy='20' r='9' fill='%2322C55E'/></svg>",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

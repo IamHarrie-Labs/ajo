@@ -16,7 +16,7 @@ import {
   JoinConfirmModal,
 } from '../components/Modals';
 import { POOLIT_POOLS, fmt } from '../lib/data';
-import { fetchMyPools } from '../lib/anchor-client';
+import { fetchMyPools, fetchUsdcBalance } from '../lib/anchor-client';
 import type { OnchainPool } from '../lib/anchor-client';
 import type { Pool, DiscoverPool, RotationMember, ModalState, Wallet, CreateForm } from '../lib/types';
 
@@ -27,7 +27,7 @@ export default function App() {
   const [modal, setModal]   = useState<ModalState>(null);
   const [toasts, setToasts] = useState<{ id: number; msg: string; icon: string }[]>([]);
   const [pools, setPools]           = useState<Pool[]>(POOLIT_POOLS);
-  const [wallet, setWallet]         = useState<Wallet>({ addr: '5dEr...8wXy', balance: 1240.50 });
+  const [wallet, setWallet]         = useState<Wallet>({ addr: '', balance: 0 });
   const [fetchingPools, setFetchingPools] = useState(false);
 
   const pushToast = (msg: string, icon = 'check') => {
@@ -107,11 +107,18 @@ export default function App() {
   }, [wallet.fullAddr]);
 
   const handleConnect = (kind: 'phone' | 'wallet', address?: string) => {
-    if (address) setWallet(w => ({
-      ...w,
-      addr: `${address.slice(0, 4)}...${address.slice(-4)}`,
-      fullAddr: address,
-    }));
+    if (address) {
+      setWallet(w => ({
+        ...w,
+        addr: `${address.slice(0, 4)}...${address.slice(-4)}`,
+        fullAddr: address,
+        balance: 0, // will be replaced by real balance below
+      }));
+      // Fetch real devnet USDC balance in the background
+      fetchUsdcBalance(address).then(bal => {
+        setWallet(w => ({ ...w, balance: bal }));
+      }).catch(() => {/* leave at 0 */});
+    }
     setAuthed(true);
     pushToast(kind === 'phone' ? 'Signed in via phone' : 'Wallet connected');
   };
@@ -193,6 +200,7 @@ export default function App() {
           onConnect={handleConnect}
           theme={theme}
           onThemeToggle={v => setTheme(v as 'safe' | 'bold')}
+          walletAddr={wallet.fullAddr}
         />
       </div>
     );

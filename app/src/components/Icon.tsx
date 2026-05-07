@@ -95,6 +95,10 @@ export default function Icon({ name, size = 16, className = '', style }: IconPro
       return <svg {...props}><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8v.01" /></svg>;
     case 'zap':
       return <svg {...props}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>;
+    case 'sun':
+      return <svg {...props}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>;
+    case 'moon':
+      return <svg {...props}><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" /></svg>;
     default:
       return null;
   }

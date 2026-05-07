@@ -77,7 +77,14 @@ export function ContributeModal({ pool, wallet, onClose, onDone }: ContributeMod
       return;
     }
 
-    // ── Demo path: simulated flow (mock data / no wallet) ───────────────────
+    // ── Demo path: only when no wallet extension is present ─────────────────
+    // If a real wallet is connected but the pool has no on-chain account, surface an error.
+    if (sender && getWalletProvider()) {
+      setErrMsg('This pool has no on-chain account. Create a real pool first, then contribute with your wallet.');
+      setStep('error');
+      return;
+    }
+    // Purely disconnected demo mode
     setStep('signing');
     setTimeout(() => setStep('sent'), 900);
     setTimeout(() => setStep('done'), 1900);

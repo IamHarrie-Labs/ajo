@@ -8,14 +8,41 @@ interface LandingProps {
   onConnect: (kind: 'phone' | 'wallet', address?: string) => void;
   theme: string;
   onThemeToggle: (v: string) => void;
+  walletAddr?: string;
 }
 
-export default function Landing({ onConnect, theme, onThemeToggle }: LandingProps) {
+export default function Landing({ onConnect, theme, onThemeToggle, walletAddr }: LandingProps) {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'phone' | 'wallet'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [authStep, setAuthStep] = useState<'input' | 'otp' | 'connecting'>('input');
+  // Wallet already approved in the browser extension (detected on mount)
+  const [detectedAddr, setDetectedAddr] = useState<string | null>(null);
+
+  // Check if any installed wallet already has an active session
+  useEffect(() => {
+    const check = async () => {
+      if (typeof window === 'undefined') return;
+      const w = window as any;
+      const phantom = w.phantom?.solana ?? w.solana;
+      if (phantom?.isPhantom && phantom.isConnected && phantom.publicKey) {
+        setDetectedAddr(phantom.publicKey.toString()); return;
+      }
+      const solflare = w.solflare;
+      if (solflare?.isSolflare && solflare.isConnected && solflare.publicKey) {
+        setDetectedAddr(solflare.publicKey.toString()); return;
+      }
+      const backpack = w.backpack?.solana ?? (w as any).xnft?.solana;
+      if (backpack?.isConnected && backpack.publicKey) {
+        setDetectedAddr(backpack.publicKey.toString());
+      }
+    };
+    check();
+  }, []);
+
+  // The address to show if connected (prop from parent or auto-detected)
+  const connectedAddr = walletAddr || detectedAddr;
 
   const startConnect = (kind: 'phone' | 'wallet') => {
     setAuthMode(kind);
@@ -102,14 +129,30 @@ export default function Landing({ onConnect, theme, onThemeToggle }: LandingProp
             <a href="#faq">FAQ</a>
           </nav>
           <div className="row gap-8">
-            <div className="seg" style={{ marginRight: 4 }}>
-              <button className={theme === 'safe' ? 'on' : ''} onClick={() => onThemeToggle('safe')}>Light</button>
-              <button className={theme === 'bold' ? 'on' : ''} onClick={() => onThemeToggle('bold')}>Dark</button>
-            </div>
-            <button className="btn btn-sm" onClick={() => startConnect('wallet')}>Sign in</button>
-            <button className="btn btn-primary btn-sm" onClick={() => startConnect('phone')}>
-              Open app <Icon name="arrow-right" size={12} />
+            {/* Single icon theme toggle */}
+            <button
+              className="btn btn-sm btn-icon"
+              onClick={() => onThemeToggle(theme === 'safe' ? 'bold' : 'safe')}
+              title={theme === 'safe' ? 'Switch to dark mode' : 'Switch to light mode'}
+              style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center' }}
+            >
+              <Icon name={theme === 'safe' ? 'moon' : 'sun'} size={15} />
             </button>
+            {connectedAddr ? (
+              /* Wallet already connected — show pill + enter button */
+              <>
+                <span className="badge good no-dot mono" style={{ fontSize: 11 }}>
+                  {connectedAddr.slice(0, 4)}…{connectedAddr.slice(-4)}
+                </span>
+                <button className="btn btn-primary btn-sm" onClick={() => onConnect('wallet', connectedAddr)}>
+                  Enter app <Icon name="arrow-right" size={12} />
+                </button>
+              </>
+            ) : (
+              <button className="btn btn-primary btn-sm" onClick={() => startConnect('phone')}>
+                Open app <Icon name="arrow-right" size={12} />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -133,9 +176,15 @@ export default function Landing({ onConnect, theme, onThemeToggle }: LandingProp
                 lose their collateral by member vote. No chasing, no spreadsheets, no broken promises.
               </p>
               <div className="lp-cta">
-                <button className="btn btn-primary btn-lg" onClick={() => startConnect('phone')}>
-                  Open the app <Icon name="arrow-right" size={14} />
-                </button>
+                {connectedAddr ? (
+                  <button className="btn btn-primary btn-lg" onClick={() => onConnect('wallet', connectedAddr)}>
+                    <Icon name="check" size={14} /> Wallet connected · Enter app
+                  </button>
+                ) : (
+                  <button className="btn btn-primary btn-lg" onClick={() => startConnect('phone')}>
+                    Open the app <Icon name="arrow-right" size={14} />
+                  </button>
+                )}
                 <a href="/docs" className="btn btn-lg" style={{ textDecoration: 'none' }}>
                   <Icon name="book" size={14} /> Read the docs
                 </a>
@@ -310,9 +359,15 @@ export default function Landing({ onConnect, theme, onThemeToggle }: LandingProp
               No fees on devnet. Sign up in 30 seconds. Bring your circle, or join an open one.
             </p>
             <div className="lp-cta">
-              <button className="btn btn-primary btn-lg" onClick={() => startConnect('phone')}>
-                Open the app <Icon name="arrow-right" size={14} />
-              </button>
+              {connectedAddr ? (
+                <button className="btn btn-primary btn-lg" onClick={() => onConnect('wallet', connectedAddr)}>
+                  <Icon name="check" size={14} /> Wallet connected · Enter app
+                </button>
+              ) : (
+                <button className="btn btn-primary btn-lg" onClick={() => startConnect('phone')}>
+                  Open the app <Icon name="arrow-right" size={14} />
+                </button>
+              )}
               <a href="/docs" className="btn btn-lg" style={{ textDecoration: 'none' }}>
                 <Icon name="book" size={14} /> Read the docs
               </a>
