@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Sidebar, Topbar } from '../components/Shell';
+import { Sidebar, Topbar, BottomNav } from '../components/Shell';
 import Landing from '../components/Landing';
 import Dashboard from '../components/Dashboard';
 import PoolDetail from '../components/PoolDetail';
@@ -16,7 +16,7 @@ import {
   JoinConfirmModal,
 } from '../components/Modals';
 import { POOLIT_POOLS, fmt } from '../lib/data';
-import { fetchMyPools, fetchUsdcBalance } from '../lib/anchor-client';
+import { fetchMyPools, fetchUsdcBalance, fetchPoolByPubkey } from '../lib/anchor-client';
 import type { OnchainPool } from '../lib/anchor-client';
 import type { Pool, DiscoverPool, RotationMember, ModalState, Wallet, CreateForm } from '../lib/types';
 
@@ -31,6 +31,7 @@ const ROUTE_TO_PATH: Record<string, string> = {
 
 function pathToRoute(pathname: string): string {
   if (pathname.startsWith('/pools/')) return `pool-${pathname.slice(8)}`;
+  if (pathname.startsWith('/join/'))  return `join-${pathname.slice(6)}`;
   return Object.entries(ROUTE_TO_PATH).find(([, p]) => p === pathname)?.[0] ?? 'dashboard';
 }
 
@@ -45,14 +46,23 @@ export default function App() {
   const [pools, setPools]           = useState<Pool[]>(POOLIT_POOLS);
   const [wallet, setWallet]         = useState<Wallet>({ addr: '', balance: 0 });
   const [fetchingPools, setFetchingPools] = useState(false);
+  // Pool ID parsed from /join/:id — triggers join modal after wallet connect
+  const [invitePoolId, setInvitePoolId] = useState<string | null>(null);
 
   // ─── URL sync ──────────────────────────────────────────────────────────────
 
   // On first render (client-only), read the URL so a direct link to
-  // /dashboard or /pools/abc123 lands on the right view.
+  // /dashboard, /pools/abc123, or /join/abc123 lands on the right view.
   useEffect(() => {
-    const initial = pathToRoute(window.location.pathname);
-    if (initial !== 'dashboard') setRoute(initial);
+    const path = window.location.pathname;
+    const initial = pathToRoute(path);
+    if (initial.startsWith('join-')) {
+      // Store invite ID; show landing until wallet connects
+      setInvitePoolId(initial.slice(5));
+      setRoute('dashboard'); // will navigate there after auth
+    } else if (initial !== 'dashboard') {
+      setRoute(initial);
+    }
   }, []);
 
   // Mirror route changes into the browser address bar.
@@ -110,6 +120,29 @@ export default function App() {
     onchainPubkey:    op.pubkey,
     privateContributions: false,
   }), [wallet.fullAddr]);
+
+  // ─── Auto-open join modal when arriving via invite link ─────────────────
+  useEffect(() => {
+    if (!wallet.fullAddr || !invitePoolId || !authed) return;
+    let cancelled = false;
+    fetchPoolByPubkey(invitePoolId, wallet.fullAddr).then(onchain => {
+      if (cancelled || !onchain) return;
+      const discoverPool: DiscoverPool = {
+        id: onchain.pubkey,
+        name: `Pool ${onchain.pubkey.slice(0, 6)}`,
+        contribution: onchain.contributionAmount,
+        members: onchain.members.length,
+        filled: onchain.members.length,
+        cycle: 'monthly',
+        repAvg: 100,
+        tags: ['invite'],
+      };
+      openJoin(discoverPool);
+      setInvitePoolId(null); // clear so it only fires once
+    }).catch(() => { /* pool not found or not on-chain */ });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet.fullAddr, invitePoolId, authed]);
 
   // ─── Fetch real pools when a wallet is connected ─────────────────────────
   useEffect(() => {
@@ -172,6 +205,13 @@ export default function App() {
     setRoute('dashboard');
     window.history.pushState({}, '', '/');
   };
+
+  const handleSharePool = useCallback((pool: Pool) => {
+    const id = pool.onchainPubkey || pool.id;
+    const url = `${window.location.origin}/join/${id}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    pushToast('Invite link copied to clipboard', 'check');
+  }, []);
 
   // ─── Modal openers ───────────────────────────────────────────────────────
   const openContribute = (pool: Pool) => setModal({ kind: 'contribute', pool });
@@ -250,6 +290,7 @@ export default function App() {
           theme={theme}
           onThemeToggle={v => setTheme(v as 'safe' | 'bold')}
           walletAddr={wallet.fullAddr}
+          invitePoolId={invitePoolId}
         />
       </div>
     );
@@ -282,6 +323,7 @@ export default function App() {
           onContribute={openContribute}
           onWithdraw={openWithdraw}
           onSlashVote={openSlash}
+          onShare={handleSharePool}
           onBack={() => setRoute('dashboard')}
         />
       );
@@ -292,6 +334,7 @@ export default function App() {
     <div className={`theme-${theme}`} style={{ width: '100%', height: '100%' }}>
       <div className="app">
         <Sidebar route={route} onNavigate={setRoute} wallet={wallet} onLogout={handleLogout} />
+        <BottomNav route={route} onNavigate={setRoute} />
         <div className="main">
           <Topbar
             crumbs={crumbs}

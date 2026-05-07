@@ -9,9 +9,10 @@ interface LandingProps {
   theme: string;
   onThemeToggle: (v: string) => void;
   walletAddr?: string;
+  invitePoolId?: string | null;
 }
 
-export default function Landing({ onConnect, theme, onThemeToggle, walletAddr }: LandingProps) {
+export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, invitePoolId }: LandingProps) {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'phone' | 'wallet'>('phone');
   const [phone, setPhone] = useState('');
@@ -152,6 +153,23 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr }:
 
   return (
     <div className="lp">
+      {/* Invite pool banner */}
+      {invitePoolId && (
+        <div className="lp-invite-banner">
+          <Icon name="users" size={15} />
+          <span>You&apos;ve been invited to join a Circles savings pool</span>
+          {connectedAddr ? (
+            <button className="btn btn-primary btn-sm" onClick={enterWithDetectedWallet}>
+              Enter app to join <Icon name="arrow-right" size={12} />
+            </button>
+          ) : (
+            <button className="btn btn-primary btn-sm" onClick={() => startConnect('wallet')}>
+              Connect wallet to join <Icon name="arrow-right" size={12} />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Nav */}
       <header className="lp-nav">
         <div className="lp-nav-inner">

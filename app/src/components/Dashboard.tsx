@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Icon from './Icon';
 import { fmt, POOLIT_POOLS, POOLIT_ACTIVITY, POOLIT_REPUTATION } from '../lib/data';
 import type { Pool, ActivityItem } from '../lib/types';
@@ -8,11 +8,29 @@ import type { Pool, ActivityItem } from '../lib/types';
 interface DashboardProps {
   onNavigate: (r: string) => void;
   onContribute: (pool: Pool) => void;
-  wallet: { addr: string; balance: number };
+  wallet: { addr: string; balance: number; fullAddr?: string };
   /** Live pools — passed from page.tsx so real onchain data overrides mock data */
   pools?: Pool[];
   onGetUsdc?: () => void;
   fetchingPools?: boolean;
+}
+
+/** Open Jupiter Terminal modal for SOL → devnet USDC swaps */
+function openJupiterSwap(walletAddr?: string) {
+  const w = window as any;
+  if (!w.Jupiter) {
+    // Script not yet loaded — open Circle faucet as fallback
+    window.open('https://faucet.circle.com/', '_blank');
+    return;
+  }
+  w.Jupiter.init({
+    endpoint: process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+    displayMode: 'modal',
+    formProps: {
+      fixedOutputMint: process.env.NEXT_PUBLIC_USDC_MINT || '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+      initialOutputMint: process.env.NEXT_PUBLIC_USDC_MINT || '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+    },
+  });
 }
 
 export default function Dashboard({ onNavigate, onContribute, wallet, pools: poolsProp, onGetUsdc, fetchingPools }: DashboardProps) {
@@ -44,15 +62,14 @@ export default function Dashboard({ onNavigate, onContribute, wallet, pools: poo
           <div className="stat-value">{fmt(wallet.balance)}</div>
           <div className="stat-delta up" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span><Icon name="trending" size={11} /> USDC · devnet</span>
-            {onGetUsdc && (
-              <button
-                className="btn btn-sm"
-                onClick={e => { e.stopPropagation(); onGetUsdc(); }}
-                style={{ fontSize: 10, padding: '2px 8px', height: 20, lineHeight: 1 }}
-              >
-                + Get test USDC
-              </button>
-            )}
+            <button
+              className="btn btn-sm"
+              onClick={e => { e.stopPropagation(); openJupiterSwap(wallet.fullAddr); }}
+              style={{ fontSize: 10, padding: '2px 8px', height: 20, lineHeight: 1 }}
+              title="Swap SOL → USDC or get devnet tokens"
+            >
+              + Get USDC
+            </button>
           </div>
         </div>
         <div className="stat">

@@ -10,10 +10,11 @@ interface PoolDetailProps {
   onContribute: (pool: Pool) => void;
   onWithdraw: (pool: Pool) => void;
   onSlashVote: (pool: Pool, member: RotationMember) => void;
+  onShare?: (pool: Pool) => void;
   onBack: () => void;
 }
 
-export default function PoolDetail({ pool, onContribute, onWithdraw, onSlashVote, onBack }: PoolDetailProps) {
+export default function PoolDetail({ pool, onContribute, onWithdraw, onSlashVote, onShare, onBack }: PoolDetailProps) {
   const [tab, setTab] = useState<'rotation' | 'members' | 'history' | 'rules'>('rotation');
   const youRow = pool.rotation.find(r => r.isYou);
   const currentRow = pool.rotation.find(r => r.idx === pool.currentRound);
@@ -41,6 +42,11 @@ export default function PoolDetail({ pool, onContribute, onWithdraw, onSlashVote
           <div className="page-sub">{pool.description}</div>
         </div>
         <div className="row gap-8">
+          {onShare && (
+            <button className="btn btn-sm" onClick={() => onShare(pool)} title="Copy invite link">
+              <Icon name="link" size={13} /> Invite
+            </button>
+          )}
           {yourTurn && pool.contributedThisRound === pool.members && (
             <button className="btn btn-accent btn-lg" onClick={() => onWithdraw(pool)}>
               <Icon name="arrow-down" size={14} /> Withdraw {fmt(pool.pot, 0)} USDC

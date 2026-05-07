@@ -79,6 +79,40 @@ export function Sidebar({ route, onNavigate, wallet, onLogout }: SidebarProps) {
   );
 }
 
+// ─── Bottom navigation (mobile) ───────────────────────────────────────────────
+
+interface BottomNavProps {
+  route: string;
+  onNavigate: (r: string) => void;
+}
+
+export function BottomNav({ route, onNavigate }: BottomNavProps) {
+  const items = [
+    { key: 'dashboard', label: 'Home',     icon: 'home'    },
+    { key: 'discover',  label: 'Discover', icon: 'compass' },
+    { key: 'create',    label: 'Create',   icon: 'plus'    },
+    { key: 'profile',   label: 'Profile',  icon: 'shield'  },
+  ];
+  return (
+    <nav className="bottom-nav">
+      {items.map(it => (
+        <button
+          key={it.key}
+          className={`bottom-nav-item ${route.startsWith(it.key) ? 'active' : ''}`}
+          onClick={() => onNavigate(it.key)}
+        >
+          <div className="bottom-nav-pill">
+            <Icon name={it.icon} size={19} />
+          </div>
+          {it.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+// ─── Topbar ───────────────────────────────────────────────────────────────────
+
 interface TopbarProps {
   crumbs: string[];
   actions?: React.ReactNode;

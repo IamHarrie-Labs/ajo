@@ -140,6 +140,37 @@ export async function fetchUsdcBalance(walletAddress: string): Promise<number> {
   }
 }
 
+// ─── Fetch a single pool by pubkey (used for invite links) ────────────────────
+
+/**
+ * Fetches one pool account by its public key.
+ * Requires a connected wallet to build the Anchor program.
+ */
+export async function fetchPoolByPubkey(
+  poolPubkey: string,
+  walletAddr: string,
+): Promise<OnchainPool | null> {
+  try {
+    const program = makeProgram(walletAddr);
+    const account = await (program.account as any).pool.fetch(new PublicKey(poolPubkey));
+    return {
+      pubkey:               poolPubkey,
+      poolId:               account.poolId.toString(),
+      creator:              account.creator.toBase58(),
+      members:              account.members.map((m: PublicKey) => m.toBase58()),
+      contributionAmount:   account.contributionAmount.toNumber() / 1_000_000,
+      currentRound:         account.currentRound,
+      currentRecipientIdx:  account.currentRecipientIdx,
+      poolVault:            account.poolVault.toBase58(),
+      status:               Object.keys(account.status)[0] as 'Active' | 'Completed' | 'Defaulted',
+      contributionsThisRound: account.contributionsThisRound,
+      defaultedMembers:     account.defaultedMembers.map((m: PublicKey) => m.toBase58()),
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─── On-chain pool data ────────────────────────────────────────────────────────
 
 export interface OnchainPool {

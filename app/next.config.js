@@ -14,6 +14,7 @@ const nextConfig = {
       { source: '/create',       destination: '/' },
       { source: '/profile',      destination: '/' },
       { source: '/pools/:id',    destination: '/' },
+      { source: '/join/:id',     destination: '/' },
     ];
   },
   webpack: (config, { isServer }) => {
