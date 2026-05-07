@@ -20,6 +20,22 @@ import { fetchMyPools, fetchUsdcBalance } from '../lib/anchor-client';
 import type { OnchainPool } from '../lib/anchor-client';
 import type { Pool, DiscoverPool, RotationMember, ModalState, Wallet, CreateForm } from '../lib/types';
 
+// ─── URL ↔ route helpers ───────────────────────────────────────────────────────
+
+const ROUTE_TO_PATH: Record<string, string> = {
+  dashboard: '/dashboard',
+  discover:  '/discover',
+  create:    '/create',
+  profile:   '/profile',
+};
+
+function pathToRoute(pathname: string): string {
+  if (pathname.startsWith('/pools/')) return `pool-${pathname.slice(8)}`;
+  return Object.entries(ROUTE_TO_PATH).find(([, p]) => p === pathname)?.[0] ?? 'dashboard';
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
 export default function App() {
   const [theme, setTheme]   = useState<'safe' | 'bold'>('safe');
   const [authed, setAuthed] = useState(false);
@@ -29,6 +45,35 @@ export default function App() {
   const [pools, setPools]           = useState<Pool[]>(POOLIT_POOLS);
   const [wallet, setWallet]         = useState<Wallet>({ addr: '', balance: 0 });
   const [fetchingPools, setFetchingPools] = useState(false);
+
+  // ─── URL sync ──────────────────────────────────────────────────────────────
+
+  // On first render (client-only), read the URL so a direct link to
+  // /dashboard or /pools/abc123 lands on the right view.
+  useEffect(() => {
+    const initial = pathToRoute(window.location.pathname);
+    if (initial !== 'dashboard') setRoute(initial);
+  }, []);
+
+  // Mirror route changes into the browser address bar.
+  useEffect(() => {
+    if (!authed) return;
+    const path = route.startsWith('pool-')
+      ? `/pools/${route.slice(5)}`
+      : (ROUTE_TO_PATH[route] ?? '/dashboard');
+    if (window.location.pathname !== path) {
+      window.history.pushState({ route }, '', path);
+    }
+  }, [route, authed]);
+
+  // Keep in sync with the browser Back / Forward buttons.
+  useEffect(() => {
+    const onPop = () => setRoute(pathToRoute(window.location.pathname));
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   const pushToast = (msg: string, icon = 'check') => {
     const id = Date.now() + Math.random();
@@ -122,7 +167,11 @@ export default function App() {
     setAuthed(true);
     pushToast(kind === 'phone' ? 'Signed in via phone' : 'Wallet connected');
   };
-  const handleLogout = () => { setAuthed(false); };
+  const handleLogout = () => {
+    setAuthed(false);
+    setRoute('dashboard');
+    window.history.pushState({}, '', '/');
+  };
 
   // ─── Modal openers ───────────────────────────────────────────────────────
   const openContribute = (pool: Pool) => setModal({ kind: 'contribute', pool });
@@ -249,10 +298,14 @@ export default function App() {
             actions={
               <>
                 <button className="btn btn-sm" title="Search"><Icon name="search" size={13} /></button>
-                <div className="seg">
-                  <button className={theme === 'safe' ? 'on' : ''} onClick={() => setTheme('safe')}>Light</button>
-                  <button className={theme === 'bold' ? 'on' : ''} onClick={() => setTheme('bold')}>Dark</button>
-                </div>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => setTheme(t => t === 'safe' ? 'bold' : 'safe')}
+                  title={theme === 'safe' ? 'Switch to dark' : 'Switch to light'}
+                  style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center' }}
+                >
+                  <Icon name={theme === 'safe' ? 'moon' : 'sun'} size={15} />
+                </button>
               </>
             }
           />

@@ -86,25 +86,33 @@ type WalletProvider = {
 };
 
 /**
- * Returns the first detected wallet extension provider, or null if none
- * is installed / connected.
+ * Returns the connected wallet extension provider, or null if no wallet
+ * is installed OR the user hasn't approved the connection yet.
+ *
+ * We now check `isConnected` so we don't hand back a provider that would
+ * reject signing (and therefore silently fall through to the demo path).
  */
 export function getWalletProvider(): WalletProvider | null {
   if (typeof window === 'undefined') return null;
+  type Ext = Record<string, unknown>;
+  const w = window as unknown as Ext;
 
-  const w = window as unknown as Record<string, unknown>;
+  // Phantom (new injection or legacy window.solana)
+  const phantom = (w['phantom'] as Ext | undefined)?.['solana'] as Ext | undefined;
+  if (phantom?.['isPhantom'] && phantom?.['isConnected']) return phantom as WalletProvider;
 
-  const phantom = w['phantom'] as Record<string, unknown> | undefined;
-  if (phantom?.['solana']) return phantom['solana'] as WalletProvider;
+  // Solflare
+  const sf = w['solflare'] as Ext | undefined;
+  if (sf?.['isSolflare'] && sf?.['isConnected']) return sf as WalletProvider;
 
-  const solflare = w['solflare'] as WalletProvider | undefined;
-  if (solflare?.signAndSendTransaction || solflare?.signTransaction) return solflare;
+  // Backpack
+  const bp = (w['backpack'] as Ext | undefined)?.['solana'] as Ext | undefined;
+  if (bp?.['isConnected']) return bp as WalletProvider;
 
-  const backpack = w['backpack'] as Record<string, unknown> | undefined;
-  if (backpack?.['solana']) return backpack['solana'] as WalletProvider;
-
-  const solana = w['solana'] as WalletProvider | undefined;
-  if (solana?.signAndSendTransaction || solana?.signTransaction) return solana;
+  // Fallback: legacy window.solana (older Phantom)
+  const sol = w['solana'] as Ext | undefined;
+  if (sol?.['isConnected'] && (sol?.['signTransaction'] || sol?.['signAndSendTransaction']))
+    return sol as WalletProvider;
 
   return null;
 }

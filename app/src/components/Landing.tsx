@@ -44,6 +44,46 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr }:
   // The address to show if connected (prop from parent or auto-detected)
   const connectedAddr = walletAddr || detectedAddr;
 
+  /**
+   * Enter the app using an already-approved wallet extension.
+   * We call .connect() silently first so the provider session is active,
+   * which means signTransaction will actually pop up the wallet UI.
+   */
+  const enterWithDetectedWallet = async () => {
+    if (!connectedAddr) return;
+    setAuthStep('connecting');
+    const w = window as any;
+    try {
+      const phantom = w.phantom?.solana ?? w.solana;
+      if (phantom?.isPhantom) {
+        // onlyIfTrusted = silent reconnect; never shows a popup
+        const resp = await phantom.connect({ onlyIfTrusted: true });
+        onConnect('wallet', resp.publicKey.toString());
+        return;
+      }
+      const solflare = w.solflare;
+      if (solflare?.isSolflare) {
+        await solflare.connect();
+        onConnect('wallet', solflare.publicKey?.toString() ?? connectedAddr);
+        return;
+      }
+      const backpack = w.backpack?.solana ?? w.xnft?.solana;
+      if (backpack) {
+        const resp = await backpack.connect();
+        onConnect('wallet', resp.publicKey?.toString() ?? connectedAddr);
+        return;
+      }
+    } catch {
+      // Silent reconnect failed — open the connect modal so the user can approve manually
+      setAuthMode('wallet');
+      setAuthStep('input');
+      setAuthOpen(true);
+      return;
+    }
+    // Absolute fallback
+    onConnect('wallet', connectedAddr);
+  };
+
   const startConnect = (kind: 'phone' | 'wallet') => {
     setAuthMode(kind);
     setAuthStep('input');
@@ -144,7 +184,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr }:
                 <span className="badge good no-dot mono" style={{ fontSize: 11 }}>
                   {connectedAddr.slice(0, 4)}…{connectedAddr.slice(-4)}
                 </span>
-                <button className="btn btn-primary btn-sm" onClick={() => onConnect('wallet', connectedAddr)}>
+                <button className="btn btn-primary btn-sm" onClick={enterWithDetectedWallet}>
                   Enter app <Icon name="arrow-right" size={12} />
                 </button>
               </>
@@ -177,7 +217,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr }:
               </p>
               <div className="lp-cta">
                 {connectedAddr ? (
-                  <button className="btn btn-primary btn-lg" onClick={() => onConnect('wallet', connectedAddr)}>
+                  <button className="btn btn-primary btn-lg" onClick={enterWithDetectedWallet}>
                     <Icon name="check" size={14} /> Wallet connected · Enter app
                   </button>
                 ) : (
@@ -360,7 +400,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr }:
             </p>
             <div className="lp-cta">
               {connectedAddr ? (
-                <button className="btn btn-primary btn-lg" onClick={() => onConnect('wallet', connectedAddr)}>
+                <button className="btn btn-primary btn-lg" onClick={enterWithDetectedWallet}>
                   <Icon name="check" size={14} /> Wallet connected · Enter app
                 </button>
               ) : (
