@@ -47,3 +47,4 @@ circles-authority-key.txt
 
 # Next.js build output
 app/.next/
+.vercel
