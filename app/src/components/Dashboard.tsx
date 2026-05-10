@@ -16,28 +16,13 @@ interface DashboardProps {
   fetchingPools?: boolean;
 }
 
-/** Open Jupiter Terminal modal for SOL → devnet USDC swaps */
-function openJupiterSwap(walletAddr?: string) {
-  const w = window as any;
-  if (!w.Jupiter) {
-    window.open('https://faucet.circle.com/', '_blank');
-    return;
-  }
-  w.Jupiter.init({
-    endpoint: process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-    displayMode: 'modal',
-    formProps: {
-      fixedOutputMint:   process.env.NEXT_PUBLIC_USDC_MINT || '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
-      initialOutputMint: process.env.NEXT_PUBLIC_USDC_MINT || '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
-    },
-  });
-}
 
 export default function Dashboard({
   onNavigate,
   onContribute,
   wallet,
   pools: poolsProp,
+  onGetUsdc,
   fetchingPools,
 }: DashboardProps) {
   const myPools     = (poolsProp ?? []).filter(p => p.youAreIn);
@@ -89,9 +74,9 @@ export default function Dashboard({
             <span><Icon name="trending" size={11} /> USDC · devnet</span>
             <button
               className="btn btn-sm"
-              onClick={e => { e.stopPropagation(); openJupiterSwap(wallet.fullAddr); }}
+              onClick={e => { e.stopPropagation(); onGetUsdc?.(); }}
               style={{ fontSize: 10, padding: '2px 8px', height: 20, lineHeight: 1 }}
-              title="Swap SOL → USDC or get devnet tokens"
+              title="Get test USDC from the devnet faucet"
             >
               + Get USDC
             </button>

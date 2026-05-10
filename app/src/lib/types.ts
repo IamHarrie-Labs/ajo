@@ -94,6 +94,7 @@ export type ModalState =
   | { kind: 'withdraw'; pool: Pool }
   | { kind: 'slash'; pool: Pool; member: RotationMember }
   | { kind: 'join'; pool: DiscoverPool | Pool }
+  | { kind: 'usdc' }
   | null;
 
 export interface CreateForm {

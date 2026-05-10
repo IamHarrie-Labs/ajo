@@ -14,6 +14,7 @@ import {
   WithdrawModal,
   SlashVoteModal,
   JoinConfirmModal,
+  GetUsdcModal,
 } from '../components/Modals';
 import { fmt } from '../lib/data';
 import { fetchMyPools, fetchUsdcBalance, fetchPoolByPubkey } from '../lib/anchor-client';
@@ -183,23 +184,16 @@ export default function App() {
   }, [wallet.fullAddr, onchainToPool]);
 
   // ─── Devnet USDC faucet ───────────────────────────────────────────────────
-  const handleGetUsdc = useCallback(async () => {
+  const handleGetUsdc = useCallback(() => {
     if (!wallet.fullAddr) { pushToast('Connect a wallet first', 'alert'); return; }
-    pushToast('Requesting test USDC…', 'send');
-    try {
-      const res = await fetch('/api/faucet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: wallet.fullAddr }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Faucet request failed');
-      setWallet(w => ({ ...w, balance: w.balance + (data.amount ?? 100) }));
-      pushToast(`+${data.amount ?? 100} USDC added to your wallet`);
-    } catch (err: unknown) {
-      pushToast(err instanceof Error ? err.message : 'Faucet error', 'alert');
-    }
+    setModal({ kind: 'usdc' });
   }, [wallet.fullAddr]);
+
+  const onUsdcReceived = useCallback((amount: number) => {
+    setWallet(w => ({ ...w, balance: w.balance + amount }));
+    setModal(null);
+    pushToast(`+${amount} USDC added to your wallet`);
+  }, []);
 
   const handleConnect = (kind: 'phone' | 'wallet', address?: string) => {
     if (address) {
@@ -399,6 +393,9 @@ export default function App() {
       )}
       {modal?.kind === 'join' && (
         <JoinConfirmModal pool={modal.pool as DiscoverPool} wallet={wallet} onClose={() => setModal(null)} onDone={onJoined} />
+      )}
+      {modal?.kind === 'usdc' && (
+        <GetUsdcModal wallet={wallet} onClose={() => setModal(null)} onDone={onUsdcReceived} />
       )}
     </div>
   );

@@ -22,8 +22,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
-        {/* Jupiter Terminal — SOL ↔ USDC swap widget */}
-        <script src="https://terminal.jup.ag/main-v2.js" data-preload async />
       </head>
       <body>
         {children}

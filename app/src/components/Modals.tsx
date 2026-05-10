@@ -568,3 +568,156 @@ export function JoinConfirmModal({ pool, wallet, onClose, onDone }: JoinConfirmM
     </div>
   );
 }
+
+// ─── Get USDC Modal ──────────────────────────────────────────────────────────
+
+interface GetUsdcModalProps {
+  wallet: Wallet;
+  onClose: () => void;
+  onDone: (amount: number) => void;
+}
+
+export function GetUsdcModal({ wallet, onClose, onDone }: GetUsdcModalProps) {
+  const [step, setStep]   = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [errMsg, setErrMsg] = useState('');
+  const FAUCET_AMOUNT = 100;
+
+  const requestFaucet = async () => {
+    if (!wallet.fullAddr) return;
+    setStep('loading');
+    try {
+      const res = await fetch('/api/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: wallet.fullAddr }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Faucet request failed');
+      setStep('done');
+      setTimeout(() => onDone(data.amount ?? FAUCET_AMOUNT), 1500);
+    } catch (err: unknown) {
+      setErrMsg(err instanceof Error ? err.message : 'Request failed. Try the Circle faucet instead.');
+      setStep('error');
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={step === 'idle' ? onClose : undefined}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+
+        {/* ── Idle ── */}
+        {step === 'idle' && (
+          <>
+            <div className="modal-head">
+              <div>
+                <div className="modal-title">Get test USDC</div>
+                <div className="modal-sub">Circles devnet faucet · {wallet.addr}</div>
+              </div>
+              <button className="modal-close" onClick={onClose}><Icon name="x" size={14} /></button>
+            </div>
+
+            {/* You receive block */}
+            <div style={{ background: 'var(--accent-soft)', borderRadius: 12, padding: 24, textAlign: 'center', marginBottom: 18 }}>
+              <div className="text-xs" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, color: 'var(--accent)' }}>You receive</div>
+              <div className="mono" style={{ fontSize: 42, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 8, color: 'var(--accent)' }}>
+                +100.00
+              </div>
+              <div className="text-sm mono" style={{ color: 'var(--accent)', opacity: 0.8 }}>USDC · Solana devnet</div>
+            </div>
+
+            {/* Source row */}
+            <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 16, marginBottom: 18 }}>
+              <div className="row gap-10">
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--ink)', color: 'var(--bg)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                  <Logo size={18} />
+                </div>
+                <div className="flex-1">
+                  <div style={{ fontWeight: 500, fontSize: 13.5 }}>Circles Devnet Faucet</div>
+                  <div className="text-xs text-muted mono">Free test tokens · limit 100 USDC per request</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="divider" style={{ margin: '0 0 16px' }} />
+            <div className="kv"><span className="kv-k">To</span><span className="kv-v mono">{wallet.addr}</span></div>
+            <div className="kv"><span className="kv-k">Network</span><span className="kv-v">Solana devnet</span></div>
+            <div className="kv"><span className="kv-k">Amount</span><span className="kv-v">100 USDC</span></div>
+            <div className="kv"><span className="kv-k">Network fee</span><span className="kv-v">None · free</span></div>
+
+            <button className="btn btn-primary btn-lg btn-block" onClick={requestFaucet} style={{ marginTop: 20 }}>
+              <Icon name="send" size={14} /> Request 100 USDC
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 14px', color: 'var(--muted)', fontSize: 12 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+              or
+              <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+            </div>
+
+            <a
+              href="https://faucet.circle.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-block"
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              Circle USDC Faucet <Icon name="chevron-right" size={12} />
+            </a>
+          </>
+        )}
+
+        {/* ── Loading ── */}
+        {step === 'loading' && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div className="check-burst" style={{ background: 'var(--surface-2)', color: 'var(--muted)' }}>
+              <div className="shimmer" style={{ width: 28, height: 28, borderRadius: '50%' }} />
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>Requesting USDC…</div>
+            <div className="text-sm text-muted" style={{ marginTop: 6 }}>Sending test tokens to {wallet.addr}</div>
+          </div>
+        )}
+
+        {/* ── Done ── */}
+        {step === 'done' && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div className="check-burst">
+              <Icon name="check" size={28} />
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.015em' }}>+100 USDC received</div>
+            <div className="text-sm text-muted" style={{ marginTop: 6 }}>Added to your devnet wallet.</div>
+          </div>
+        )}
+
+        {/* ── Error ── */}
+        {step === 'error' && (
+          <>
+            <div className="modal-head">
+              <div>
+                <div className="modal-title">Get test USDC</div>
+                <div className="modal-sub">Faucet request failed</div>
+              </div>
+              <button className="modal-close" onClick={onClose}><Icon name="x" size={14} /></button>
+            </div>
+            <div style={{ background: 'var(--warn-soft)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '14px 16px', marginBottom: 18 }}>
+              <div style={{ fontWeight: 600, color: 'var(--warn)', marginBottom: 4, fontSize: 13 }}>Request failed</div>
+              <div className="text-sm text-muted">{errMsg}</div>
+            </div>
+            <button className="btn btn-primary btn-block btn-lg" onClick={() => setStep('idle')}>
+              Try again
+            </button>
+            <a
+              href="https://faucet.circle.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-block btn-ghost"
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}
+            >
+              Circle USDC Faucet <Icon name="chevron-right" size={12} />
+            </a>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+}
