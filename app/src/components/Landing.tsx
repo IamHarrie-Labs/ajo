@@ -252,13 +252,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
                 </a>
               </div>
               <div className="lp-trust-row">
-                <span className="text-xs text-muted mono">TRUSTED BY EARLY CIRCLES FROM</span>
-                <div className="lp-logos">
-                  <span>Lagos Founders</span>
-                  <span>Crypto Sisters</span>
-                  <span>Accra Builders</span>
-                  <span>NGN Diaspora</span>
-                </div>
+                <span className="text-xs text-muted mono">LIVE ON SOLANA DEVNET · OPEN FOR TESTING</span>
               </div>
             </div>
 
@@ -269,13 +263,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
             </div>
           </div>
 
-          {/* Stats strip */}
-          <div className="lp-stats-strip">
-            <div className="lp-stat"><div className="lp-stat-val">$1.4M</div><div className="lp-stat-lbl">Pooled to date</div></div>
-            <div className="lp-stat"><div className="lp-stat-val">2,318</div><div className="lp-stat-lbl">Rounds settled</div></div>
-            <div className="lp-stat"><div className="lp-stat-val">98.2%</div><div className="lp-stat-lbl">On time rate</div></div>
-            <div className="lp-stat"><div className="lp-stat-val">412</div><div className="lp-stat-lbl">Active circles</div></div>
-          </div>
+          {/* Stats strip — real numbers will appear here once mainnet launches */}
         </section>
 
         {/* HOW IT WORKS */}
@@ -365,32 +353,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
           </div>
         </section>
 
-        {/* TESTIMONIALS */}
-        <section className="lp-section lp-section-alt">
-          <div className="lp-section-head">
-            <span className="lp-eyebrow">From early circles</span>
-            <h2 className="lp-h2">What early users are saying</h2>
-          </div>
-          <div className="lp-testimonials">
-            {[
-              { q: "My ajo group lost ₦400k last year when one person ghosted. With Circles, that just isn't possible — their collateral covers it.", a: 'Chiamaka O.', r: 'Lagos Founders Circle' },
-              { q: "I've run a 12-person savings circle on WhatsApp for three years. Spreadsheets, screenshots, chasing people. Now it just runs.", a: 'Kwame A.', r: 'Accra Builders Pool' },
-              { q: 'The phone number login changed everything. Half my members had never touched a wallet before.', a: 'Folake B.', r: 'Crypto Sisters Weekly' },
-            ].map((t, i) => (
-              <div key={i} className="lp-testimonial">
-                <div className="lp-quote">&quot;</div>
-                <div className="lp-testimonial-q">{t.q}</div>
-                <div className="lp-testimonial-a">
-                  <div className="avatar">{t.a[0]}</div>
-                  <div>
-                    <div className="lp-testimonial-name">{t.a}</div>
-                    <div className="lp-testimonial-role">{t.r}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Testimonials removed — will be added once real users are onboarded */}
 
         {/* FAQ */}
         <section id="faq" className="lp-section">
@@ -508,18 +471,18 @@ function HeroPoolCard() {
     return () => clearInterval(t);
   }, []);
   const rows = [
-    { idx: 1, name: 'Ade.sol',  addr: '7xKX...4hQp' },
-    { idx: 2, name: 'Chiamaka', addr: '9bNm...2fLj' },
-    { idx: 3, name: 'Tunde',    addr: 'Bs8q...vN3w' },
-    { idx: 4, name: 'Ifeoma',   addr: 'Cz1y...mP9k' },
-    { idx: 5, name: 'You',      addr: '5dEr...8wXy', isYou: true },
+    { idx: 1, name: '7xKX...4hQp', addr: '7xKX...4hQp' },
+    { idx: 2, name: '9bNm...2fLj', addr: '9bNm...2fLj' },
+    { idx: 3, name: 'Bs8q...vN3w', addr: 'Bs8q...vN3w' },
+    { idx: 4, name: 'Cz1y...mP9k', addr: 'Cz1y...mP9k' },
+    { idx: 5, name: '5dEr...8wXy', addr: '5dEr...8wXy', isYou: true },
   ];
   return (
     <div className="lp-hero-card lp-card-main">
       <div className="row-between" style={{ marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 13.5, fontWeight: 600 }}>Lagos Founders Circle</div>
-          <div className="text-xs text-muted mono" style={{ marginTop: 2 }}>Round {round} of 8 · monthly</div>
+          <div style={{ fontSize: 13.5, fontWeight: 600 }}>7Ph9…3E4 Pool</div>
+          <div className="text-xs text-muted mono" style={{ marginTop: 2 }}>Round {round} of 5 · monthly</div>
         </div>
         <span className="badge good no-dot">ACTIVE</span>
       </div>
@@ -558,11 +521,11 @@ function FloatingTxCard() {
           <Icon name="arrow-down" size={14} />
         </div>
         <div>
-          <div style={{ fontSize: 12.5, fontWeight: 600 }}>Payout received</div>
-          <div className="text-xs text-muted">Crypto Sisters · Round 2</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600 }}>Round payout received</div>
+          <div className="text-xs text-muted mono">7Ph9…3E4 · Round 2</div>
         </div>
       </div>
-      <div className="mono" style={{ fontSize: 18, fontWeight: 500, color: 'var(--good)' }}>+300.00 USDC</div>
+      <div className="mono" style={{ fontSize: 18, fontWeight: 500, color: 'var(--good)' }}>+USDC</div>
     </div>
   );
 }
@@ -571,14 +534,14 @@ function FloatingRepCard() {
   return (
     <div className="lp-float lp-float-rep">
       <div className="row gap-10" style={{ alignItems: 'center' }}>
-        <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'conic-gradient(var(--accent) 0% 94%, var(--surface-2) 94% 100%)', display: 'grid', placeItems: 'center' }}>
+        <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'conic-gradient(var(--accent) 0% 80%, var(--surface-2) 80% 100%)', display: 'grid', placeItems: 'center' }}>
           <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface)', display: 'grid', placeItems: 'center' }}>
-            <span className="mono" style={{ fontSize: 12, fontWeight: 600 }}>94</span>
+            <Icon name="shield" size={13} />
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 12.5, fontWeight: 600 }}>Reputation</div>
-          <div className="text-xs text-muted">7 pools · 0 defaults</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600 }}>Reputation score</div>
+          <div className="text-xs text-muted">Computed onchain</div>
         </div>
       </div>
     </div>
