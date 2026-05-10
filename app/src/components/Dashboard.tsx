@@ -29,6 +29,20 @@ export default function Dashboard({
   const totalPooled = myPools.reduce((s, p) => s + p.contribution * p.contributedThisRound, 0);
   const nextDue     = myPools.find(p => !p.yourPaid && p.status === 'active');
 
+  // Compute the soonest upcoming payout from real pool data
+  const nextPayoutLabel = (() => {
+    const activePools = myPools.filter(p => p.status === 'active' && p.nextPayout);
+    if (activePools.length === 0) return null;
+    const soonest = activePools.reduce((a, b) =>
+      new Date(a.nextPayout).getTime() < new Date(b.nextPayout).getTime() ? a : b
+    );
+    const diff = new Date(soonest.nextPayout).getTime() - Date.now();
+    if (diff <= 0) return 'Overdue';
+    const days  = Math.floor(diff / 86_400_000);
+    const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+    return days > 0 ? `Next payout in ${days}d ${hours}h` : `Next payout in ${hours}h`;
+  })();
+
   const [activity, setActivity]                 = useState<ActivityItem[]>([]);
   const [fetchingActivity, setFetchingActivity] = useState(false);
 
@@ -52,7 +66,8 @@ export default function Dashboard({
         <div>
           <div className="page-title">Dashboard</div>
           <div className="page-sub">
-            Active rounds: {myPools.filter(p => p.status === 'active').length} · Next payout in 4d
+            Active rounds: {myPools.filter(p => p.status === 'active').length}
+            {nextPayoutLabel && ` · ${nextPayoutLabel}`}
           </div>
         </div>
         <div className="row gap-8">

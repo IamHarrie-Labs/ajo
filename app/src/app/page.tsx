@@ -50,20 +50,23 @@ export default function App() {
   // Pool ID parsed from /join/:id — triggers join modal after wallet connect
   const [invitePoolId, setInvitePoolId] = useState<string | null>(null);
 
-  // ─── Session persistence — auto-reconnect on page refresh ───────────────
+  // ─── Session persistence — restore wallet on page load ──────────────────
+  // Uses localStorage (survives tab close / browser restart).
+  // We restore the UI immediately without waiting for the extension —
+  // balance comes from the RPC, and the extension re-authorises silently
+  // the next time a tx is signed.
   useEffect(() => {
-    const saved = sessionStorage.getItem('circles_wallet');
+    const saved = localStorage.getItem('circles_wallet');
     if (!saved) return;
-    const w = window as any;
-    const ext =
-      (w.phantom?.solana?.isPhantom && w.phantom.solana.isConnected ? w.phantom.solana : null) ??
-      (w.solflare?.isSolflare && w.solflare.isConnected ? w.solflare : null) ??
-      (w.backpack?.solana?.isConnected ? w.backpack.solana : null);
-    if (!ext) { sessionStorage.removeItem('circles_wallet'); return; }
-    // Extension is still connected — restore auth silently
+    // Restore UI state instantly
     setWallet({ addr: `${saved.slice(0, 4)}...${saved.slice(-4)}`, fullAddr: saved, balance: 0 });
     setAuthed(true);
+    // Fetch balance from RPC — doesn't need the extension
     fetchUsdcBalance(saved).then(bal => setWallet(w2 => ({ ...w2, balance: bal }))).catch(() => {});
+    // Silently re-authorise the extension in the background (onlyIfTrusted = no popup)
+    const w = window as any;
+    const phantom = w.phantom?.solana ?? w.solana;
+    if (phantom?.isPhantom) phantom.connect({ onlyIfTrusted: true }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -197,7 +200,7 @@ export default function App() {
 
   const handleConnect = (kind: 'phone' | 'wallet', address?: string) => {
     if (address) {
-      sessionStorage.setItem('circles_wallet', address);
+      localStorage.setItem('circles_wallet', address);
       setWallet(w => ({
         ...w,
         addr: `${address.slice(0, 4)}...${address.slice(-4)}`,
@@ -211,13 +214,24 @@ export default function App() {
     setAuthed(true);
     pushToast(kind === 'phone' ? 'Signed in via phone' : 'Wallet connected');
   };
+
   const handleLogout = () => {
-    sessionStorage.removeItem('circles_wallet');
+    localStorage.removeItem('circles_wallet');
     setAuthed(false);
     setWallet({ addr: '', balance: 0 });
     setPools([]);
     setRoute('dashboard');
     window.history.pushState({}, '', '/');
+    // Tell the extension to drop its session so isConnected resets
+    const w = window as any;
+    try {
+      const phantom = w.phantom?.solana ?? w.solana;
+      if (phantom?.isPhantom) phantom.disconnect?.();
+      const solflare = w.solflare;
+      if (solflare?.isSolflare) solflare.disconnect?.();
+      const backpack = w.backpack?.solana ?? w.xnft?.solana;
+      if (backpack) backpack.disconnect?.();
+    } catch { /* ignore */ }
   };
 
   const handleSharePool = useCallback((pool: Pool) => {
@@ -301,6 +315,7 @@ export default function App() {
       <div className={`theme-${theme}`} style={{ width: '100%', height: '100%' }}>
         <Landing
           onConnect={handleConnect}
+          onLogout={handleLogout}
           theme={theme}
           onThemeToggle={v => setTheme(v as 'safe' | 'bold')}
           walletAddr={wallet.fullAddr}

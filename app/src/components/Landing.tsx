@@ -6,13 +6,14 @@ import Logo from './Logo';
 
 interface LandingProps {
   onConnect: (kind: 'phone' | 'wallet', address?: string) => void;
+  onLogout?: () => void;
   theme: string;
   onThemeToggle: (v: string) => void;
   walletAddr?: string;
   invitePoolId?: string | null;
 }
 
-export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, invitePoolId }: LandingProps) {
+export default function Landing({ onConnect, onLogout, theme, onThemeToggle, walletAddr, invitePoolId }: LandingProps) {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'phone' | 'wallet'>('phone');
   const [phone, setPhone] = useState('');
@@ -144,6 +145,23 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
     }
   };
 
+  // Disconnect: clears localStorage, resets local detected state, tells parent
+  const handleDisconnect = () => {
+    localStorage.removeItem('circles_wallet');
+    setDetectedAddr(null);
+    // Also tell the extension to drop its session
+    try {
+      const w = window as any;
+      const phantom = w.phantom?.solana ?? w.solana;
+      if (phantom?.isPhantom) phantom.disconnect?.();
+      const solflare = w.solflare;
+      if (solflare?.isSolflare) solflare.disconnect?.();
+      const backpack = w.backpack?.solana ?? w.xnft?.solana;
+      if (backpack) backpack.disconnect?.();
+    } catch { /* ignore */ }
+    onLogout?.();
+  };
+
   // Detect which wallets are installed in the browser
   const detectWallets = () => {
     if (typeof window === 'undefined') return { phantom: false, solflare: false, backpack: false };
@@ -201,13 +219,21 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
               <Icon name={theme === 'safe' ? 'moon' : 'sun'} size={15} />
             </button>
             {connectedAddr ? (
-              /* Wallet already connected — show pill + enter button */
+              /* Wallet already connected — show pill + enter + disconnect */
               <>
                 <span className="badge good no-dot mono" style={{ fontSize: 11 }}>
                   {connectedAddr.slice(0, 4)}…{connectedAddr.slice(-4)}
                 </span>
                 <button className="btn btn-primary btn-sm" onClick={enterWithDetectedWallet}>
                   Enter app <Icon name="arrow-right" size={12} />
+                </button>
+                <button
+                  className="btn btn-sm"
+                  onClick={handleDisconnect}
+                  title="Disconnect wallet"
+                  style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center' }}
+                >
+                  <Icon name="logout" size={14} />
                 </button>
               </>
             ) : (
