@@ -252,7 +252,7 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
             <div className="lp-hero-copy">
               <div className="landing-eyebrow">
                 <span className="dot" />
-                <span>Live on Solana devnet · Audit scheduled Q3</span>
+                <span>Live on Solana devnet · Open for testing</span>
               </div>
               <h1 className="lp-h1">
                 Rotating savings,<br />
@@ -362,7 +362,7 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
                 {[
                   { t: 'No custody escrow',    d: "Funds sit in an Anchor program — not a company wallet. We can't touch them." },
                   { t: 'Open source contracts', d: 'Read every line on GitHub. Programs are immutable once deployed to mainnet.' },
-                  { t: 'Security audit Q3',    d: 'Audit by Halborn scheduled for Q3 2026. Devnet is open to the public for stress testing right now.' },
+                  { t: 'Open for stress testing', d: 'Devnet is live and public. Try every instruction — create pools, contribute, slash, withdraw — before mainnet launches.' },
                   { t: 'No admin keys',        d: 'No upgrade path that bypasses members. Slash decisions require a majority vote onchain.' },
                 ].map((p, i) => (
                   <div key={i} className="lp-trust-point">
@@ -452,7 +452,7 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
               <div className="lp-footer-h">Resources</div>
               <a href="/docs">Docs</a>
               <a href="#">Smart contracts</a>
-              <a href="#">Audit</a>
+              <a href="/docs">Program IDL</a>
               <a href="#faq">FAQ</a>
             </div>
             <div>
@@ -466,7 +466,7 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
         </div>
         <div className="lp-footer-bottom">
           <span className="text-xs text-muted mono">© 2026 Circles Labs</span>
-          <span className="text-xs text-muted mono">Devnet · v0.1.0 · Not yet audited — do not use mainnet funds</span>
+          <span className="text-xs text-muted mono">Devnet · v0.1.0 · Do not use mainnet funds</span>
         </div>
       </footer>
 
