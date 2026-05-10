@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Icon from './Icon';
 import { fmt } from '../lib/data';
+import { useCountdown } from '../lib/hooks';
 import type { Pool, RotationMember } from '../lib/types';
 
 interface PoolDetailProps {
@@ -20,6 +21,7 @@ export default function PoolDetail({ pool, onContribute, onWithdraw, onSlashVote
   const currentRow = pool.rotation.find(r => r.idx === pool.currentRound);
   const yourTurn = youRow && youRow.idx === pool.currentRound;
   const lateRow = pool.rotation.find(r => r.late);
+  const cd = useCountdown(pool.nextPayout);
 
   return (
     <div className="content">
@@ -86,11 +88,19 @@ export default function PoolDetail({ pool, onContribute, onWithdraw, onSlashVote
           <div className="stat-delta">{currentRow ? `→ ${currentRow.name}` : '—'}</div>
         </div>
         <div className="stat">
-          <div className="stat-label">Next payout</div>
-          <div className="stat-value" style={{ fontSize: 22 }}>
-            {new Date(pool.nextPayout).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          <div className="stat-label">Next contribution due</div>
+          <div className="stat-value" style={{ fontSize: 22, color: cd.expired ? 'var(--warn)' : cd.days === 0 && cd.hours < 6 ? 'var(--warn)' : undefined }}>
+            {cd.expired
+              ? 'Overdue'
+              : cd.days > 0
+                ? `${cd.days}d ${cd.hours}h`
+                : `${cd.hours}h ${cd.minutes}m`}
           </div>
-          <div className="stat-delta">in 4 days</div>
+          <div className="stat-delta mono" style={{ fontSize: 11 }}>
+            {cd.expired
+              ? new Date(pool.nextPayout).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              : `${String(cd.hours).padStart(2,'0')}:${String(cd.minutes).padStart(2,'0')}:${String(cd.seconds).padStart(2,'0')} remaining`}
+          </div>
         </div>
       </div>
 
