@@ -116,9 +116,11 @@ export function BottomNav({ route, onNavigate }: BottomNavProps) {
 interface TopbarProps {
   crumbs: string[];
   actions?: React.ReactNode;
+  wallet?: Wallet;
+  onLogout?: () => void;
 }
 
-export function Topbar({ crumbs, actions }: TopbarProps) {
+export function Topbar({ crumbs, actions, wallet, onLogout }: TopbarProps) {
   return (
     <div className="topbar">
       <div className="crumbs">
@@ -129,7 +131,28 @@ export function Topbar({ crumbs, actions }: TopbarProps) {
           </span>
         ))}
       </div>
-      {actions && <div className="topbar-actions">{actions}</div>}
+      <div className="topbar-actions">
+        {actions}
+        {wallet?.addr && (
+          <>
+            <span
+              className="badge no-dot mono"
+              style={{ fontSize: 11, letterSpacing: '0.02em', cursor: 'default' }}
+              title={wallet.fullAddr}
+            >
+              {wallet.addr}
+            </span>
+            <button
+              className="btn btn-sm"
+              onClick={onLogout}
+              title="Disconnect wallet"
+              style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center' }}
+            >
+              <Icon name="logout" size={14} />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

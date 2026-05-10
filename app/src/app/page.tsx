@@ -49,6 +49,23 @@ export default function App() {
   // Pool ID parsed from /join/:id — triggers join modal after wallet connect
   const [invitePoolId, setInvitePoolId] = useState<string | null>(null);
 
+  // ─── Session persistence — auto-reconnect on page refresh ───────────────
+  useEffect(() => {
+    const saved = sessionStorage.getItem('circles_wallet');
+    if (!saved) return;
+    const w = window as any;
+    const ext =
+      (w.phantom?.solana?.isPhantom && w.phantom.solana.isConnected ? w.phantom.solana : null) ??
+      (w.solflare?.isSolflare && w.solflare.isConnected ? w.solflare : null) ??
+      (w.backpack?.solana?.isConnected ? w.backpack.solana : null);
+    if (!ext) { sessionStorage.removeItem('circles_wallet'); return; }
+    // Extension is still connected — restore auth silently
+    setWallet({ addr: `${saved.slice(0, 4)}...${saved.slice(-4)}`, fullAddr: saved, balance: 0 });
+    setAuthed(true);
+    fetchUsdcBalance(saved).then(bal => setWallet(w2 => ({ ...w2, balance: bal }))).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ─── URL sync ──────────────────────────────────────────────────────────────
 
   // On first render (client-only), read the URL so a direct link to
@@ -186,22 +203,25 @@ export default function App() {
 
   const handleConnect = (kind: 'phone' | 'wallet', address?: string) => {
     if (address) {
+      sessionStorage.setItem('circles_wallet', address);
       setWallet(w => ({
         ...w,
         addr: `${address.slice(0, 4)}...${address.slice(-4)}`,
         fullAddr: address,
-        balance: 0, // will be replaced by real balance below
+        balance: 0,
       }));
-      // Fetch real devnet USDC balance in the background
       fetchUsdcBalance(address).then(bal => {
         setWallet(w => ({ ...w, balance: bal }));
-      }).catch(() => {/* leave at 0 */});
+      }).catch(() => {});
     }
     setAuthed(true);
     pushToast(kind === 'phone' ? 'Signed in via phone' : 'Wallet connected');
   };
   const handleLogout = () => {
+    sessionStorage.removeItem('circles_wallet');
     setAuthed(false);
+    setWallet({ addr: '', balance: 0 });
+    setPools([]);
     setRoute('dashboard');
     window.history.pushState({}, '', '/');
   };
@@ -338,9 +358,10 @@ export default function App() {
         <div className="main">
           <Topbar
             crumbs={crumbs}
+            wallet={wallet}
+            onLogout={handleLogout}
             actions={
               <>
-                <button className="btn btn-sm" title="Search"><Icon name="search" size={13} /></button>
                 <button
                   className="btn btn-sm"
                   onClick={() => setTheme(t => t === 'safe' ? 'bold' : 'safe')}

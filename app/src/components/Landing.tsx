@@ -91,7 +91,11 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
     setAuthOpen(true);
   };
 
-  const handlePhoneNext = () => { if (!phone) return; setAuthStep('otp'); };
+  // SMS auth is not yet live — switch user to wallet connect instead
+  const handlePhoneNext = () => {
+    setAuthMode('wallet');
+    setAuthStep('input');
+  };
   const handleOtpSubmit = () => { setAuthStep('connecting'); setTimeout(() => onConnect('phone'), 1100); };
 
   // Real wallet connection: open the browser extension wallet directly.
@@ -207,7 +211,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
                 </button>
               </>
             ) : (
-              <button className="btn btn-primary btn-sm" onClick={() => startConnect('phone')}>
+              <button className="btn btn-primary btn-sm" onClick={() => startConnect('wallet')}>
                 Open app <Icon name="arrow-right" size={12} />
               </button>
             )}
@@ -239,7 +243,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
                     <Icon name="check" size={14} /> Wallet connected · Enter app
                   </button>
                 ) : (
-                  <button className="btn btn-primary btn-lg" onClick={() => startConnect('phone')}>
+                  <button className="btn btn-primary btn-lg" onClick={() => startConnect('wallet')}>
                     Open the app <Icon name="arrow-right" size={14} />
                   </button>
                 )}
@@ -422,7 +426,7 @@ export default function Landing({ onConnect, theme, onThemeToggle, walletAddr, i
                   <Icon name="check" size={14} /> Wallet connected · Enter app
                 </button>
               ) : (
-                <button className="btn btn-primary btn-lg" onClick={() => startConnect('phone')}>
+                <button className="btn btn-primary btn-lg" onClick={() => startConnect('wallet')}>
                   Open the app <Icon name="arrow-right" size={14} />
                 </button>
               )}
@@ -716,28 +720,30 @@ function AuthModal({
 
         {step === 'input' && mode === 'phone' && (
           <>
-            <div className="field">
-              <label className="field-label">Phone number</label>
-              <input
-                className="input mono"
-                autoFocus
-                placeholder="+234 700 000 0000"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-              />
-              <div className="field-hint">Standard SMS rates apply. We never share your number.</div>
+            <div style={{
+              padding: '16px',
+              background: 'var(--surface-2)',
+              borderRadius: 10,
+              display: 'flex',
+              gap: 12,
+              alignItems: 'flex-start',
+            }}>
+              <div style={{ flexShrink: 0, marginTop: 2 }}>
+                <Icon name="phone" size={16} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>Phone login coming soon</div>
+                <div className="text-sm text-muted">
+                  SMS authentication with embedded wallets is on the roadmap. For now, connect any Solana wallet — it takes under a minute.
+                </div>
+              </div>
             </div>
             <button
               className="btn btn-primary btn-block btn-lg"
               style={{ marginTop: 16 }}
               onClick={onPhoneNext}
-              disabled={!phone}
             >
-              Send code <Icon name="arrow-right" size={14} />
-            </button>
-            <div className="h-rule">or</div>
-            <button className="btn btn-block" onClick={() => onSwitchMode('wallet')} style={{ color: 'var(--ink)' }}>
-              <Icon name="wallet" size={15} /> Continue with wallet
+              <Icon name="wallet" size={14} /> Connect a wallet instead
             </button>
           </>
         )}
