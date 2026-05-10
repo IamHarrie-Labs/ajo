@@ -15,7 +15,7 @@ import {
   SlashVoteModal,
   JoinConfirmModal,
 } from '../components/Modals';
-import { POOLIT_POOLS, fmt } from '../lib/data';
+import { fmt } from '../lib/data';
 import { fetchMyPools, fetchUsdcBalance, fetchPoolByPubkey } from '../lib/anchor-client';
 import type { OnchainPool } from '../lib/anchor-client';
 import type { Pool, DiscoverPool, RotationMember, ModalState, Wallet, CreateForm } from '../lib/types';
@@ -43,7 +43,7 @@ export default function App() {
   const [route, setRoute]   = useState('dashboard');
   const [modal, setModal]   = useState<ModalState>(null);
   const [toasts, setToasts] = useState<{ id: number; msg: string; icon: string }[]>([]);
-  const [pools, setPools]           = useState<Pool[]>(POOLIT_POOLS);
+  const [pools, setPools]           = useState<Pool[]>([]);
   const [wallet, setWallet]         = useState<Wallet>({ addr: '', balance: 0 });
   const [fetchingPools, setFetchingPools] = useState(false);
   // Pool ID parsed from /join/:id — triggers join modal after wallet connect
@@ -305,13 +305,13 @@ export default function App() {
     body = <Dashboard onNavigate={setRoute} onContribute={openContribute} wallet={wallet} pools={pools} onGetUsdc={handleGetUsdc} fetchingPools={fetchingPools} />;
   } else if (route === 'discover') {
     crumbs = ['Circles', 'Discover'];
-    body = <Discover onJoin={openJoin} />;
+    body = <Discover onJoin={openJoin} walletAddr={wallet.fullAddr} />;
   } else if (route === 'create') {
     crumbs = ['Circles', 'Create pool'];
     body = <Create onCreated={onCreated} walletFullAddr={wallet.fullAddr} />;
   } else if (route === 'profile') {
     crumbs = ['Circles', 'Reputation'];
-    body = <Profile wallet={wallet} />;
+    body = <Profile wallet={wallet} pools={pools} />;
   } else if (route.startsWith('pool-')) {
     const pid = route.replace('pool-', '');
     const pool = pools.find(p => p.id === pid);
@@ -333,7 +333,7 @@ export default function App() {
   return (
     <div className={`theme-${theme}`} style={{ width: '100%', height: '100%' }}>
       <div className="app">
-        <Sidebar route={route} onNavigate={setRoute} wallet={wallet} onLogout={handleLogout} />
+        <Sidebar route={route} onNavigate={setRoute} wallet={wallet} onLogout={handleLogout} pools={pools} />
         <BottomNav route={route} onNavigate={setRoute} />
         <div className="main">
           <Topbar

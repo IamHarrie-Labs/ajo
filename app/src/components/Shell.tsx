@@ -3,17 +3,17 @@
 import Icon from './Icon';
 import Logo from './Logo';
 import { fmt } from '../lib/data';
-import { POOLIT_POOLS } from '../lib/data';
-import type { Wallet } from '../lib/types';
+import type { Wallet, Pool } from '../lib/types';
 
 interface SidebarProps {
   route: string;
   onNavigate: (r: string) => void;
   wallet: Wallet;
   onLogout: () => void;
+  pools?: Pool[];
 }
 
-export function Sidebar({ route, onNavigate, wallet, onLogout }: SidebarProps) {
+export function Sidebar({ route, onNavigate, wallet, onLogout, pools = [] }: SidebarProps) {
   const items = [
     { key: 'dashboard',  label: 'Dashboard',   icon: 'home' },
     { key: 'discover',   label: 'Discover',    icon: 'compass' },
@@ -21,7 +21,7 @@ export function Sidebar({ route, onNavigate, wallet, onLogout }: SidebarProps) {
     { key: 'profile',    label: 'Reputation',  icon: 'shield' },
   ];
 
-  const myPools = POOLIT_POOLS.filter(p => p.youAreIn);
+  const myPools = pools.filter(p => p.youAreIn);
 
   return (
     <aside className="sidebar">

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from './Icon';
-import { fmt, POOLIT_POOLS, POOLIT_ACTIVITY, POOLIT_REPUTATION } from '../lib/data';
+import { fmt } from '../lib/data';
+import { fetchOnchainActivity } from '../lib/anchor-client';
 import type { Pool, ActivityItem } from '../lib/types';
 
 interface DashboardProps {
@@ -19,7 +20,6 @@ interface DashboardProps {
 function openJupiterSwap(walletAddr?: string) {
   const w = window as any;
   if (!w.Jupiter) {
-    // Script not yet loaded — open Circle faucet as fallback
     window.open('https://faucet.circle.com/', '_blank');
     return;
   }
@@ -27,24 +27,48 @@ function openJupiterSwap(walletAddr?: string) {
     endpoint: process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
     displayMode: 'modal',
     formProps: {
-      fixedOutputMint: process.env.NEXT_PUBLIC_USDC_MINT || '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+      fixedOutputMint:   process.env.NEXT_PUBLIC_USDC_MINT || '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
       initialOutputMint: process.env.NEXT_PUBLIC_USDC_MINT || '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
     },
   });
 }
 
-export default function Dashboard({ onNavigate, onContribute, wallet, pools: poolsProp, onGetUsdc, fetchingPools }: DashboardProps) {
-  const myPools = (poolsProp ?? POOLIT_POOLS).filter(p => p.youAreIn);
-  const activity = POOLIT_ACTIVITY;
+export default function Dashboard({
+  onNavigate,
+  onContribute,
+  wallet,
+  pools: poolsProp,
+  fetchingPools,
+}: DashboardProps) {
+  const myPools     = (poolsProp ?? []).filter(p => p.youAreIn);
   const totalPooled = myPools.reduce((s, p) => s + p.contribution * p.contributedThisRound, 0);
-  const nextDue = myPools.find(p => !p.yourPaid);
+  const nextDue     = myPools.find(p => !p.yourPaid && p.status === 'active');
+
+  const [activity, setActivity]                 = useState<ActivityItem[]>([]);
+  const [fetchingActivity, setFetchingActivity] = useState(false);
+
+  // Fetch real on-chain activity whenever wallet or known pool list changes
+  useEffect(() => {
+    if (!wallet.fullAddr) return;
+    let cancelled = false;
+    setFetchingActivity(true);
+    const poolPubkeys = (poolsProp ?? [])
+      .map(p => p.onchainPubkey)
+      .filter((pk): pk is string => !!pk);
+    fetchOnchainActivity(wallet.fullAddr, poolPubkeys)
+      .then(items => { if (!cancelled) { setActivity(items); setFetchingActivity(false); } })
+      .catch(()   => { if (!cancelled) setFetchingActivity(false); });
+    return () => { cancelled = true; };
+  }, [wallet.fullAddr, poolsProp]);
 
   return (
     <div className="content">
       <div className="page-head">
         <div>
           <div className="page-title">Dashboard</div>
-          <div className="page-sub">Active rounds: {myPools.filter(p => p.status === 'active').length} · Next payout in 4d</div>
+          <div className="page-sub">
+            Active rounds: {myPools.filter(p => p.status === 'active').length} · Next payout in 4d
+          </div>
         </div>
         <div className="row gap-8">
           <button className="btn" onClick={() => onNavigate('discover')}>
@@ -56,6 +80,7 @@ export default function Dashboard({ onNavigate, onContribute, wallet, pools: poo
         </div>
       </div>
 
+      {/* ── Stats ── */}
       <div className="grid-4" style={{ marginBottom: 24 }}>
         <div className="stat">
           <div className="stat-label">Wallet balance</div>
@@ -75,7 +100,7 @@ export default function Dashboard({ onNavigate, onContribute, wallet, pools: poo
         <div className="stat">
           <div className="stat-label">Active pools</div>
           <div className="stat-value">{myPools.filter(p => p.status === 'active').length}</div>
-          <div className="stat-delta up">+1 this month</div>
+          <div className="stat-delta">{myPools.length === 0 ? 'None yet' : `${myPools.length} total`}</div>
         </div>
         <div className="stat">
           <div className="stat-label">Locked in pools</div>
@@ -84,11 +109,12 @@ export default function Dashboard({ onNavigate, onContribute, wallet, pools: poo
         </div>
         <div className="stat">
           <div className="stat-label">Reputation</div>
-          <div className="stat-value">{POOLIT_REPUTATION.score}</div>
-          <div className="stat-delta up"><Icon name="shield" size={11} /> Trusted</div>
+          <div className="stat-value">{myPools.length === 0 ? '—' : '100'}</div>
+          <div className="stat-delta up"><Icon name="shield" size={11} /> On-chain</div>
         </div>
       </div>
 
+      {/* ── Action required ── */}
       {nextDue && (
         <div className="card" style={{ marginBottom: 24, background: 'var(--surface-2)' }}>
           <div className="row-between">
@@ -108,6 +134,7 @@ export default function Dashboard({ onNavigate, onContribute, wallet, pools: poo
         </div>
       )}
 
+      {/* ── Pool list ── */}
       <div className="row-between" style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 14, fontWeight: 600 }}>My pools</div>
         <div className="seg">
@@ -118,15 +145,27 @@ export default function Dashboard({ onNavigate, onContribute, wallet, pools: poo
       </div>
 
       <div className="grid-3" style={{ marginBottom: 28 }}>
-        {fetchingPools
-          ? <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 24, color: 'var(--muted)', fontSize: 13 }}>
-              <div className="shimmer" style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0 }} />
-              Loading on-chain pools…
-            </div>
-          : myPools.map(p => <PoolCard key={p.id} pool={p} onClick={() => onNavigate(`pool-${p.id}`)} />)}
-        <DiscoverHintCard onClick={() => onNavigate('discover')} />
+        {fetchingPools ? (
+          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 24, color: 'var(--muted)', fontSize: 13 }}>
+            <div className="shimmer" style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0 }} />
+            Loading on-chain pools…
+          </div>
+        ) : myPools.length === 0 ? (
+          <EmptyPoolsState
+            onDiscover={() => onNavigate('discover')}
+            onCreate={() => onNavigate('create')}
+          />
+        ) : (
+          <>
+            {myPools.map(p => (
+              <PoolCard key={p.id} pool={p} onClick={() => onNavigate(`pool-${p.id}`)} />
+            ))}
+            <DiscoverHintCard onClick={() => onNavigate('discover')} />
+          </>
+        )}
       </div>
 
+      {/* ── Activity ── */}
       <div className="card">
         <div className="card-header">
           <div className="card-title">Recent activity</div>
@@ -134,45 +173,99 @@ export default function Dashboard({ onNavigate, onContribute, wallet, pools: poo
             View all <Icon name="chevron-right" size={12} />
           </button>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Event</th>
-              <th>Pool</th>
-              <th>Amount</th>
-              <th style={{ textAlign: 'right' }}>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activity.map(a => (
-              <tr key={a.id}>
-                <td>
-                  <div className="row gap-10">
-                    <ActivityIcon kind={a.kind} />
-                    <span>{a.text}</span>
-                  </div>
-                </td>
-                <td className="text-muted">{a.pool}</td>
-                <td className="mono" style={{
-                  color: a.kind === 'received' ? 'var(--good)' : a.kind === 'paid' ? 'var(--ink)' : 'var(--muted)'
-                }}>
-                  {a.amount || '—'}
-                </td>
-                <td style={{ textAlign: 'right' }} className="text-muted text-sm">{a.time}</td>
+
+        {fetchingActivity ? (
+          <div style={{ padding: '16px 0', color: 'var(--muted)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="shimmer" style={{ width: 12, height: 12, borderRadius: '50%' }} />
+            Checking on-chain transactions…
+          </div>
+        ) : activity.length === 0 ? (
+          <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+            <div style={{ marginBottom: 8 }}><Icon name="trending" size={22} /></div>
+            <div style={{ fontWeight: 500, color: 'var(--ink)', marginBottom: 4 }}>No on-chain activity yet</div>
+            <div>Contribute to a pool and your transactions will appear here.</div>
+          </div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Pool</th>
+                <th>Amount</th>
+                <th style={{ textAlign: 'right' }}>Time</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {activity.map(a => (
+                <tr key={a.id}>
+                  <td>
+                    <div className="row gap-10">
+                      <ActivityIcon kind={a.kind} />
+                      <span>{a.text}</span>
+                    </div>
+                  </td>
+                  <td className="text-muted">{a.pool}</td>
+                  <td className="mono" style={{
+                    color: a.kind === 'received' ? 'var(--good)' : a.kind === 'paid' ? 'var(--ink)' : 'var(--muted)',
+                  }}>
+                    {a.amount || '—'}
+                  </td>
+                  <td style={{ textAlign: 'right' }} className="text-muted text-sm">{a.time}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 }
 
+// ─── Empty pools state ────────────────────────────────────────────────────────
+
+function EmptyPoolsState({ onDiscover, onCreate }: { onDiscover: () => void; onCreate: () => void }) {
+  return (
+    <div
+      style={{
+        gridColumn: '1 / -1',
+        padding: '48px 24px',
+        textAlign: 'center',
+        border: '1px dashed var(--line-strong)',
+        borderRadius: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 14,
+      }}
+    >
+      <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--surface-2)', display: 'grid', placeItems: 'center' }}>
+        <Icon name="users" size={22} />
+      </div>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>No pools yet</div>
+        <div className="text-sm text-muted" style={{ maxWidth: 320, margin: '0 auto' }}>
+          You are not in any savings circles yet. Create your first pool or browse open ones to get started.
+        </div>
+      </div>
+      <div className="row gap-8">
+        <button className="btn" onClick={onDiscover}>
+          <Icon name="compass" size={13} /> Discover pools
+        </button>
+        <button className="btn btn-primary" onClick={onCreate}>
+          <Icon name="plus" size={13} /> Create a pool
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Activity icon ────────────────────────────────────────────────────────────
+
 function ActivityIcon({ kind }: { kind: ActivityItem['kind'] }) {
   const map = {
-    received: { icon: 'arrow-down',    color: 'var(--good)', bg: 'var(--accent-soft)' },
-    paid:     { icon: 'arrow-up-right', color: 'var(--ink)',  bg: 'var(--surface-2)' },
-    flagged:  { icon: 'alert',          color: 'var(--warn)', bg: 'var(--warn-soft)' },
+    received: { icon: 'arrow-down',     color: 'var(--good)', bg: 'var(--accent-soft)' },
+    paid:     { icon: 'arrow-up-right', color: 'var(--ink)',  bg: 'var(--surface-2)'  },
+    flagged:  { icon: 'alert',          color: 'var(--warn)', bg: 'var(--warn-soft)'  },
     joined:   { icon: 'users',          color: 'var(--muted)', bg: 'var(--surface-2)' },
   } as const;
   const m = map[kind] ?? map.joined;
@@ -182,6 +275,8 @@ function ActivityIcon({ kind }: { kind: ActivityItem['kind'] }) {
     </div>
   );
 }
+
+// ─── Pool card ────────────────────────────────────────────────────────────────
 
 export function PoolCard({ pool, onClick }: { pool: Pool; onClick: () => void }) {
   const pct = pool.status === 'recruiting'
@@ -233,6 +328,11 @@ export function PoolCard({ pool, onClick }: { pool: Pool; onClick: () => void })
               <Icon name="shield" size={9} /> PRIVATE
             </span>
           )}
+          {pool.onchainPubkey && (
+            <span className="badge no-dot" style={{ background: 'rgba(99,102,241,0.08)', color: '#818cf8', borderColor: 'rgba(99,102,241,0.2)', fontSize: 9.5 }}>
+              ONCHAIN
+            </span>
+          )}
           {pool.status === 'recruiting'
             ? <span className="badge no-dot">RECRUITING</span>
             : pool.yourPaid
@@ -263,7 +363,7 @@ function DiscoverHintCard({ onClick }: { onClick: () => void }) {
       </div>
       <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>Discover pools</div>
       <div className="text-xs text-muted" style={{ textAlign: 'center' }}>
-        Browse open circles by reputation,<br />contribution size and cycle.
+        Browse open circles by contribution size and cycle.
       </div>
     </div>
   );

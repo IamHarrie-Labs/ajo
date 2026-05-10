@@ -15,6 +15,7 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
+import type { ActivityItem, DiscoverPool } from './types';
 import IDL from './ajo-idl.json';
 import { getWalletProvider } from './magicblock';
 
@@ -91,6 +92,22 @@ export function ata(mint: PublicKey, owner: PublicKey): PublicKey {
 }
 
 // ─── Provider / Program ───────────────────────────────────────────────────────
+
+/**
+ * Read-only program — no wallet required.
+ * Safe to call from any component for account reads (Discover, Profile, etc.).
+ */
+function makeReadOnlyProgram(): Program {
+  const connection = new Connection(RPC, 'confirmed');
+  // Use the program ID as a dummy pubkey — only ever used for reads, never signs.
+  const dummyWallet = {
+    publicKey: PROGRAM_ID,
+    signTransaction: async (tx: any) => tx,
+    signAllTransactions: async (txs: any[]) => txs,
+  };
+  const provider = new AnchorProvider(connection, dummyWallet as any, { commitment: 'confirmed' });
+  return new Program(IDL as any, provider);
+}
 
 function makeProgram(walletFullAddr: string): Program {
   const windowProvider = getWalletProvider();
@@ -380,4 +397,164 @@ export async function txExecutePayout(
     .rpc();
 
   return sig;
+}
+
+// ─── Fetch all pools (Discover page — no wallet required) ────────────────────
+
+/**
+ * Returns every pool deployed by the Circles program on devnet.
+ * Maps to the DiscoverPool UI shape; excludes already-completed pools.
+ * Optionally pass the current wallet address to exclude pools the user is in.
+ */
+export async function fetchAllPools(currentWallet?: string): Promise<DiscoverPool[]> {
+  try {
+    const program = makeReadOnlyProgram();
+    const allAccounts = await (program.account as any).pool.all();
+    return allAccounts
+      .filter((a: any) => {
+        const statusKey = Object.keys(a.account.status)[0];
+        if (statusKey === 'Completed') return false;
+        if (currentWallet) {
+          const members: string[] = a.account.members.map((m: PublicKey) => m.toBase58());
+          if (members.includes(currentWallet)) return false;
+        }
+        return true;
+      })
+      .map((a: any): DiscoverPool => {
+        const pubkey: string = a.publicKey.toBase58();
+        const members: string[] = a.account.members.map((m: PublicKey) => m.toBase58());
+        const contribution = a.account.contributionAmount.toNumber() / 1_000_000;
+        const statusKey = Object.keys(a.account.status)[0] as string;
+        return {
+          id:           pubkey,
+          name:         `Pool ${pubkey.slice(0, 4)}…${pubkey.slice(-4)}`,
+          contribution,
+          members:      members.length,
+          filled:       members.length,
+          cycle:        'monthly',
+          repAvg:       100,
+          tags:         [statusKey === 'Active' ? 'Active' : 'Recruiting'],
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
+// ─── Fetch member reputation account ─────────────────────────────────────────
+
+export interface OnchainReputation {
+  poolsCompleted: number;
+  poolsDefaulted: number;
+  totalContributions: number; // whole USDC
+}
+
+/**
+ * Fetch the on-chain MemberReputation PDA for a wallet.
+ * Returns null if the account doesn't exist yet (new user with no history).
+ */
+export async function fetchMemberReputation(
+  walletAddr: string,
+): Promise<OnchainReputation | null> {
+  try {
+    const program = makeReadOnlyProgram();
+    const pda     = reputationPda(new PublicKey(walletAddr));
+    const account = await (program.account as any).memberReputation.fetch(pda);
+    return {
+      poolsCompleted:     account.poolsCompleted   ?? 0,
+      poolsDefaulted:     account.poolsDefaulted   ?? 0,
+      totalContributions: (account.totalContributions?.toNumber() ?? 0) / 1_000_000,
+    };
+  } catch {
+    return null; // new user — reputation account initialised on first pool completion
+  }
+}
+
+// ─── Onchain activity feed ────────────────────────────────────────────────────
+
+function ageStr(blockTime: number | null | undefined): string {
+  const ageS = Math.floor(Date.now() / 1000) - (blockTime ?? Math.floor(Date.now() / 1000));
+  if (ageS < 60)    return 'just now';
+  if (ageS < 3600)  return `${Math.floor(ageS / 60)}m ago`;
+  if (ageS < 86400) return `${Math.floor(ageS / 3600)}h ago`;
+  return `${Math.floor(ageS / 86400)}d ago`;
+}
+
+/**
+ * Fetch recent on-chain activity for `walletFullAddr` involving the Circles program.
+ * Polls up to 15 recent transactions; returns [] if the wallet has no program history.
+ * Falls back to [] on any network error so callers can stay on mock data.
+ *
+ * @param poolPubkeys  Optional list of known pool pubkeys to label activities.
+ */
+export async function fetchOnchainActivity(
+  walletFullAddr: string,
+  poolPubkeys: string[] = [],
+): Promise<ActivityItem[]> {
+  try {
+    const connection = new Connection(RPC, 'confirmed');
+    const wallet     = new PublicKey(walletFullAddr);
+
+    const sigs = await connection.getSignaturesForAddress(wallet, { limit: 20 });
+    if (sigs.length === 0) return [];
+
+    const txResults = await Promise.allSettled(
+      sigs.slice(0, 15).map(s =>
+        connection.getParsedTransaction(s.signature, { maxSupportedTransactionVersion: 0 }),
+      ),
+    );
+
+    const items: ActivityItem[] = [];
+
+    for (let i = 0; i < txResults.length; i++) {
+      const res = txResults[i];
+      if (res.status !== 'fulfilled' || !res.value) continue;
+      const tx  = res.value;
+      const sig = sigs[i];
+
+      const accountKeys = tx.transaction.message.accountKeys;
+      const involvesProgram = accountKeys.some(k => k.pubkey.toBase58() === PROGRAM_ID.toBase58());
+      if (!involvesProgram) continue;
+
+      const logStr = (tx.meta?.logMessages ?? []).join(' ');
+
+      let kind: ActivityItem['kind'] = 'joined';
+      let text = 'Transaction';
+      let amount = '';
+
+      if (logStr.includes('Instruction: Contribute')) {
+        kind   = 'paid';
+        text   = 'Contribution sent';
+        amount = '-USDC';
+      } else if (logStr.includes('Instruction: ExecutePayout')) {
+        kind   = 'received';
+        text   = 'Round payout received';
+        amount = '+USDC';
+      } else if (logStr.includes('Instruction: CreatePool')) {
+        kind = 'joined';
+        text = 'Pool created';
+      } else if (logStr.includes('Instruction: VoteSlash')) {
+        kind = 'flagged';
+        text = 'Slash vote cast';
+      }
+
+      const matchedPool = poolPubkeys.find(pk =>
+        accountKeys.some(k => k.pubkey.toBase58() === pk),
+      );
+
+      items.push({
+        id:     sig.signature.slice(0, 8),
+        kind,
+        text,
+        pool:   matchedPool ? `Pool ${matchedPool.slice(0, 6)}` : 'Circles',
+        amount,
+        time:   ageStr(sig.blockTime),
+        addr:   sig.signature,
+      });
+    }
+
+    return items;
+  } catch {
+    return [];
+  }
 }
