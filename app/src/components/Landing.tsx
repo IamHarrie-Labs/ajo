@@ -585,7 +585,7 @@ function FloatingTxCard() {
           <div className="text-xs text-muted mono">7Ph9…3E4 · Round 2</div>
         </div>
       </div>
-      <div className="mono" style={{ fontSize: 18, fontWeight: 500, color: 'var(--good)' }}>+USDC</div>
+      <div className="mono" style={{ fontSize: 18, fontWeight: 500, color: 'var(--good)' }}>+800.00 USDC</div>
     </div>
   );
 }
