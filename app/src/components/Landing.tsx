@@ -159,6 +159,27 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
         publicKey = resp.publicKey?.toString() ?? null;
         adapter = backpack;
 
+      } else if (walletName === 'OKX') {
+        const okx = (window as any).okxwallet?.solana;
+        if (!okx) { window.open('https://www.okx.com/web3', '_blank'); setAuthStep('input'); return; }
+        const resp = await okx.connect();
+        publicKey = resp.publicKey.toString();
+        adapter = okx;
+
+      } else if (walletName === 'Bitget') {
+        const bitget = (window as any).bitkeep?.solana ?? (window as any).bgwallet?.solana;
+        if (!bitget) { window.open('https://web3.bitget.com', '_blank'); setAuthStep('input'); return; }
+        const resp = await bitget.connect();
+        publicKey = resp.publicKey.toString();
+        adapter = bitget;
+
+      } else if (walletName === 'Trust') {
+        const trust = (window as any).trustwallet?.solana;
+        if (!trust) { window.open('https://trustwallet.com', '_blank'); setAuthStep('input'); return; }
+        const resp = await trust.connect();
+        publicKey = resp.publicKey?.toString() ?? null;
+        adapter = trust;
+
       } else if (walletName === 'Ledger') {
         alert('Connect your Ledger via Phantom or Solflare using the Ledger hardware wallet option.');
         setAuthStep('input');
@@ -198,12 +219,21 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
 
   // Detect which wallets are installed in the browser
   const detectWallets = () => {
-    if (typeof window === 'undefined') return { phantom: false, solflare: false, backpack: false };
+    if (typeof window === 'undefined') return {
+      phantom: false, solflare: false, backpack: false,
+      okx: false, bitget: false, trust: false,
+    };
     const w = window as any;
     return {
       phantom:  !!(w.phantom?.solana?.isPhantom || w.solana?.isPhantom),
       solflare: !!(w.solflare?.isSolflare),
       backpack: !!(w.backpack?.solana || w.xnft?.solana),
+      // OKX exposes window.okxwallet.solana on their Solana provider
+      okx:    !!(w.okxwallet?.solana),
+      // Bitget (formerly BitKeep) exposes window.bitkeep.solana
+      bitget: !!(w.bitkeep?.solana || w.bgwallet?.solana),
+      // Trust Wallet exposes window.trustwallet.solana
+      trust:  !!(w.trustwallet?.solana || w.solana?.isTrust),
     };
   };
 
@@ -678,6 +708,15 @@ const LEDGER_ICON   = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMzUgMzU
 // SVG mark from the Backpack GitHub brand assets.
 const BACKPACK_ICON = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjRTMzRTNGIi8+PHBhdGggZD0iTTE2IDZDMTMuMjQgNiAxMSA4LjI0IDExIDExdjFIOXYxMmgxNFYxMmgtMnYtMWMwLTIuNzYtMi4yNC01LTUtNXptMCAyYzEuNjYgMCAzIDEuMzQgMyAzdjFoLTZ2LTFjMC0xLjY2IDEuMzQtMyAzLTN6bS0xIDhIN3YyaDJ2LTJoMTR2Mmgydi0yaC0yeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=';
 
+// OKX Wallet — black background, four-square grid mark (their official logo pattern)
+const OKX_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjMDAwIi8+PHJlY3QgeD0iOSIgeT0iOSIgd2lkdGg9IjUiIGhlaWdodD0iNSIgZmlsbD0iI2ZmZiIvPjxyZWN0IHg9IjE4IiB5PSI5IiB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iOSIgeT0iMTgiIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxOCIgeT0iMTgiIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
+
+// Bitget Wallet — teal background, white B letterform
+const BITGET_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjMDBCOEM4Ii8+PHBhdGggZD0iTTEwIDhoNy41YzIuNSAwIDQuNSAxLjUgNC41IDQgMCAxLjItLjUgMi4yLTEuNCAyLjkgMS4yLjcgMiAxLjkgMiAzLjMgMCAyLjctMiA0LjMtNC45IDQuM0gxMFY4em0zIDUuNWg0Yy45IDAgMS41LS41IDEuNS0xLjQgMC0uOC0uNi0xLjQtMS41LTEuNGgtNHYyLjh6bTAgNS43aDQuMmMxIDAgMS43LS42IDEuNy0xLjYgMC0uOS0uNy0xLjUtMS43LTEuNUgxM3YzLjF6IiBmaWxsPSIjZmZmIi8+PC9zdmc+';
+
+// Trust Wallet — blue background, white shield with checkmark
+const TRUST_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjMzM3NUJCIi8+PHBhdGggZD0iTTE2IDZsOSAzLjV2OC41YzAgNC43LTMuOCA4LjItOSAxMC01LjItMS44LTktNS4zLTktMTBWOS41TDE2IDZ6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTE2IDlsNiAyLjR2NmMwIDMuMi0yLjYgNS42LTYgNi44LTMuNC0xLjItNi0zLjYtNi02Ljh2LTZsNi0yLjR6IiBmaWxsPSIjMzM3NUJCIi8+PHBhdGggZD0iTTEzLjUgMTYuNWwyIDIgMy41LTMuNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBmaWxsPSJub25lIi8+PC9zdmc+';
+
 // ─── Auth Modal ───────────────────────────────────────────────────────────────
 
 interface AuthModalProps {
@@ -690,7 +729,7 @@ interface AuthModalProps {
   onPhoneNext: () => void;
   onOtpSubmit: () => void;
   onWalletConnect: (walletName: string) => void;
-  detectWallets: () => { phantom: boolean; solflare: boolean; backpack: boolean };
+  detectWallets: () => { phantom: boolean; solflare: boolean; backpack: boolean; okx: boolean; bitget: boolean; trust: boolean };
 }
 
 function AuthModal({
@@ -717,6 +756,24 @@ function AuthModal({
       icon: BACKPACK_ICON,
       detected: detected.backpack,
       installUrl: 'https://www.backpack.app',
+    },
+    {
+      name: 'OKX',
+      icon: OKX_ICON,
+      detected: detected.okx,
+      installUrl: 'https://www.okx.com/web3',
+    },
+    {
+      name: 'Bitget',
+      icon: BITGET_ICON,
+      detected: detected.bitget,
+      installUrl: 'https://web3.bitget.com',
+    },
+    {
+      name: 'Trust',
+      icon: TRUST_ICON,
+      detected: detected.trust,
+      installUrl: 'https://trustwallet.com',
     },
     {
       name: 'Ledger',
