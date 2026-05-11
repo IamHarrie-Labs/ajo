@@ -99,16 +99,14 @@ export default function Create({ onCreated, walletFullAddr }: CreateProps) {
                 <div className="field-hint">Total rounds equals member count. Each round one member gets the pot.</div>
               </div>
               <div className="field">
-                <label className="field-label">Collateral (USDC, refundable)</label>
-                <input className="input mono" type="number" value={form.collateral} onChange={e => upd('collateral', Number(e.target.value))} />
-                <div className="field-hint">Locked at join. Slashed by member vote if a contribution is missed.</div>
-              </div>
-              <div className="field">
-                <label className="field-label">Member wallets</label>
+                <label className="field-label">
+                  Member wallets
+                  <span className="text-muted" style={{ fontWeight: 400, marginLeft: 8, fontSize: 12 }}>optional</span>
+                </label>
                 <textarea
                   className="input"
                   rows={4}
-                  placeholder={"Paste one Solana wallet per line.\nYou are added as the first member automatically."}
+                  placeholder={"Paste one Solana wallet per line.\nYou are added as the first member automatically.\nLeave blank to deploy now and invite members via link."}
                   value={memberInput}
                   onChange={e => setMemberInput(e.target.value)}
                   style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}
@@ -116,7 +114,7 @@ export default function Create({ onCreated, walletFullAddr }: CreateProps) {
                 <div className="field-hint">
                   {memberInput.trim()
                     ? `${memberInput.trim().split('\n').filter(l => l.trim()).length + 1} members (you + ${memberInput.trim().split('\n').filter(l => l.trim()).length} others)`
-                    : 'Must include at least one other member.'}
+                    : <span style={{ color: 'var(--muted)' }}>Skip this and share an invite link after deployment — members join from the link.</span>}
                 </div>
               </div>
 
@@ -178,7 +176,6 @@ export default function Create({ onCreated, walletFullAddr }: CreateProps) {
               <div className="kv"><span className="kv-k">Visibility</span><span className="kv-v">{form.inviteOnly ? 'Invite-only' : 'Public'}</span></div>
               <div className="kv"><span className="kv-k">Members</span><span className="kv-v">{form.members}</span></div>
               <div className="kv"><span className="kv-k">Contribution</span><span className="kv-v">{fmt(form.contribution, 0)} USDC / round</span></div>
-              <div className="kv"><span className="kv-k">Collateral</span><span className="kv-v">{fmt(form.collateral, 0)} USDC</span></div>
               <div className="kv"><span className="kv-k">Cycle</span><span className="kv-v">{form.cycle}</span></div>
               <div className="kv"><span className="kv-k">Pot per round</span><span className="kv-v">{fmt(form.contribution * form.members, 0)} USDC</span></div>
               <div className="kv"><span className="kv-k">Network fee (est.)</span><span className="kv-v">~0.0006 SOL</span></div>
@@ -199,7 +196,11 @@ export default function Create({ onCreated, walletFullAddr }: CreateProps) {
             )}
             <div style={{ background: 'var(--surface-2)', padding: 12, borderRadius: 8, fontSize: 12, marginTop: 12, display: 'flex', gap: 8 }}>
               <Icon name="lock" size={14} />
-              <span className="text-muted">You&apos;ll be prompted to sign once. Your collateral ({fmt(form.collateral, 0)} USDC) locks at deployment.</span>
+              <span className="text-muted">
+                {memberInput.trim()
+                  ? "You'll be prompted to sign once. Pool deploys with the wallets you listed."
+                  : "You'll be prompted to sign once. Pool deploys in recruiting mode — share the invite link to bring in members."}
+              </span>
             </div>
           </>
         )}
@@ -226,10 +227,15 @@ export default function Create({ onCreated, walletFullAddr }: CreateProps) {
                   const otherMembers = memberInput.trim().split('\n').map(l => l.trim()).filter(Boolean);
 
                   // ── Real on-chain deploy ──────────────────────────────────
-                  if (walletFullAddr && getWalletProvider() && otherMembers.length > 0) {
+                  // Works with or without other members pre-listed.
+                  // No members = solo deploy (recruiting mode); invite link
+                  // lets people join after the fact.
+                  if (walletFullAddr && getWalletProvider()) {
                     setDeploying(true);
                     try {
-                      const allMembers = [walletFullAddr, ...otherMembers];
+                      const allMembers = otherMembers.length > 0
+                        ? [walletFullAddr, ...otherMembers]
+                        : [walletFullAddr];
                       const cycleDays = form.cycle === 'weekly' ? 7 : form.cycle === 'biweekly' ? 14 : 30;
                       const result = await txCreatePool(walletFullAddr, allMembers, form.contribution, cycleDays);
                       onCreated(form, result.poolPubkey, result.vaultPubkey);
@@ -240,7 +246,7 @@ export default function Create({ onCreated, walletFullAddr }: CreateProps) {
                     return;
                   }
 
-                  // ── Demo path (no wallet / no members entered) ────────────
+                  // ── Demo path (no wallet connected) ──────────────────────
                   onCreated(form);
                 }}
               >
