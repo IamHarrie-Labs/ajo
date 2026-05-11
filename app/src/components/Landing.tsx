@@ -22,7 +22,8 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
   // Wallet already approved in the browser extension (detected on mount)
   const [detectedAddr, setDetectedAddr] = useState<string | null>(null);
 
-  // Check if any installed wallet already has an active session
+  // Detect which wallet is currently connected in the extension.
+  // Only runs on mount when the parent hasn't told us the wallet state.
   useEffect(() => {
     const check = async () => {
       if (typeof window === 'undefined') return;
@@ -43,13 +44,32 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
     check();
   }, []);
 
-  // The address to show if connected (prop from parent or auto-detected)
-  const connectedAddr = walletAddr || detectedAddr;
+  // When the parent explicitly signals logout (walletAddr === ''), clear any
+  // stale detectedAddr so Landing doesn't show the wallet as still connected.
+  useEffect(() => {
+    if (walletAddr === '') setDetectedAddr(null);
+  }, [walletAddr]);
+
+  // walletAddr === ''        → parent said "logged out" — show nothing
+  // walletAddr === 'abc...'  → parent said "connected" — show that
+  // walletAddr === undefined → parent doesn't know yet — fall back to extension detection
+  const connectedAddr = walletAddr === '' ? null : (walletAddr || detectedAddr);
 
   /**
-   * Enter the app using an already-approved wallet extension.
-   * We call .connect() silently first so the provider session is active,
-   * which means signTransaction will actually pop up the wallet UI.
+   * Build a sign-in message that proves wallet ownership.
+   * The nonce prevents replay attacks; time is informational.
+   */
+  const buildSignInMessage = (pubkey: string): Uint8Array => {
+    const nonce = Math.random().toString(36).slice(2, 10).toUpperCase();
+    return new TextEncoder().encode(
+      `Sign in to Circles\nWallet: ${pubkey}\nNonce: ${nonce}\nTime: ${new Date().toISOString()}`
+    );
+  };
+
+  /**
+   * Enter the app using the wallet shown in the nav bar.
+   * Always shows the extension approval popup (no silent reconnect).
+   * Requires a signed message to prove the user controls the wallet.
    */
   const enterWithDetectedWallet = async () => {
     if (!connectedAddr) return;
@@ -58,32 +78,40 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
     try {
       const phantom = w.phantom?.solana ?? w.solana;
       if (phantom?.isPhantom) {
-        // onlyIfTrusted = silent reconnect; never shows a popup
-        const resp = await phantom.connect({ onlyIfTrusted: true });
-        onConnect('wallet', resp.publicKey.toString());
+        // Regular connect — always shows the wallet popup
+        const resp = await phantom.connect();
+        const pubkey = resp.publicKey.toString();
+        await phantom.signMessage(buildSignInMessage(pubkey), 'utf8');
+        onConnect('wallet', pubkey);
         return;
       }
       const solflare = w.solflare;
       if (solflare?.isSolflare) {
         await solflare.connect();
-        onConnect('wallet', solflare.publicKey?.toString() ?? connectedAddr);
+        const pubkey = solflare.publicKey?.toString() ?? connectedAddr;
+        await solflare.signMessage(buildSignInMessage(pubkey));
+        onConnect('wallet', pubkey);
         return;
       }
       const backpack = w.backpack?.solana ?? w.xnft?.solana;
       if (backpack) {
         const resp = await backpack.connect();
-        onConnect('wallet', resp.publicKey?.toString() ?? connectedAddr);
+        const pubkey = resp.publicKey?.toString() ?? connectedAddr;
+        await backpack.signMessage(buildSignInMessage(pubkey), 'utf8');
+        onConnect('wallet', pubkey);
         return;
       }
     } catch {
-      // Silent reconnect failed — open the connect modal so the user can approve manually
+      // User rejected — open the connect modal instead
       setAuthMode('wallet');
       setAuthStep('input');
       setAuthOpen(true);
       return;
     }
-    // Absolute fallback
-    onConnect('wallet', connectedAddr);
+    // Absolute fallback (no extension found)
+    setAuthMode('wallet');
+    setAuthStep('input');
+    setAuthOpen(true);
   };
 
   const startConnect = (kind: 'phone' | 'wallet') => {
@@ -108,39 +136,45 @@ export default function Landing({ onConnect, onLogout, theme, onThemeToggle, wal
 
     try {
       let publicKey: string | null = null;
+      let adapter: any = null;
 
       if (walletName === 'Phantom') {
         const phantom = (window as any).phantom?.solana ?? (window as any).solana;
         if (!phantom?.isPhantom) { window.open('https://phantom.app', '_blank'); setAuthStep('input'); return; }
         const resp = await phantom.connect();
         publicKey = resp.publicKey.toString();
+        adapter = phantom;
 
       } else if (walletName === 'Solflare') {
         const solflare = (window as any).solflare;
         if (!solflare?.isSolflare) { window.open('https://solflare.com', '_blank'); setAuthStep('input'); return; }
         await solflare.connect();
         publicKey = solflare.publicKey?.toString() ?? null;
+        adapter = solflare;
 
       } else if (walletName === 'Backpack') {
         const backpack = (window as any).backpack?.solana ?? (window as any).xnft?.solana;
         if (!backpack) { window.open('https://www.backpack.app', '_blank'); setAuthStep('input'); return; }
         const resp = await backpack.connect();
         publicKey = resp.publicKey?.toString() ?? null;
+        adapter = backpack;
 
       } else if (walletName === 'Ledger') {
-        // Ledger needs wallet-adapter — show helpful message
         alert('Connect your Ledger via Phantom or Solflare using the Ledger hardware wallet option.');
         setAuthStep('input');
         return;
       }
 
-      if (publicKey) {
+      if (publicKey && adapter) {
+        // Require a signature to prove the user controls this wallet
+        const msg = buildSignInMessage(publicKey);
+        await adapter.signMessage(msg, 'utf8');
         onConnect('wallet', publicKey);
       } else {
         setAuthStep('input');
       }
-    } catch (err: any) {
-      // User rejected the connection
+    } catch {
+      // User rejected the connection or signing
       setAuthStep('input');
     }
   };

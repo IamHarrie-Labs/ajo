@@ -50,23 +50,16 @@ export default function App() {
   // Pool ID parsed from /join/:id — triggers join modal after wallet connect
   const [invitePoolId, setInvitePoolId] = useState<string | null>(null);
 
-  // ─── Session persistence — restore wallet on page load ──────────────────
-  // Uses localStorage (survives tab close / browser restart).
-  // We restore the UI immediately without waiting for the extension —
-  // balance comes from the RPC, and the extension re-authorises silently
-  // the next time a tx is signed.
+  // ─── Session persistence — pre-fill wallet address on page load ─────────
+  // We remember which wallet was last used (so Landing can show "welcome back"),
+  // but we do NOT auto-authenticate. Every app entry requires an explicit
+  // wallet popup + signed message — no silent reconnects.
   useEffect(() => {
     const saved = localStorage.getItem('circles_wallet');
     if (!saved) return;
-    // Restore UI state instantly
+    // Pre-fill address hint only — authed stays false until user re-approves
     setWallet({ addr: `${saved.slice(0, 4)}...${saved.slice(-4)}`, fullAddr: saved, balance: 0 });
-    setAuthed(true);
-    // Fetch balance from RPC — doesn't need the extension
     fetchUsdcBalance(saved).then(bal => setWallet(w2 => ({ ...w2, balance: bal }))).catch(() => {});
-    // Silently re-authorise the extension in the background (onlyIfTrusted = no popup)
-    const w = window as any;
-    const phantom = w.phantom?.solana ?? w.solana;
-    if (phantom?.isPhantom) phantom.connect({ onlyIfTrusted: true }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -215,24 +208,30 @@ export default function App() {
     pushToast(kind === 'phone' ? 'Signed in via phone' : 'Wallet connected');
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('circles_wallet');
+    // fullAddr: '' is the explicit "logged-out" signal to Landing.
+    // It's different from undefined ("not yet determined"), so Landing
+    // won't fall back to detectedAddr and show the wallet as still connected.
+    setWallet({ addr: '', balance: 0, fullAddr: '' });
     setAuthed(false);
-    setWallet({ addr: '', balance: 0 });
     setPools([]);
     setRoute('dashboard');
     window.history.pushState({}, '', '/');
-    // Tell the extension to drop its session so isConnected resets
-    const w = window as any;
-    try {
-      const phantom = w.phantom?.solana ?? w.solana;
-      if (phantom?.isPhantom) phantom.disconnect?.();
-      const solflare = w.solflare;
-      if (solflare?.isSolflare) solflare.disconnect?.();
-      const backpack = w.backpack?.solana ?? w.xnft?.solana;
-      if (backpack) backpack.disconnect?.();
-    } catch { /* ignore */ }
-  };
+    // Disconnect extensions in the background so isConnected resets
+    // before the user tries to reconnect.
+    (async () => {
+      const w = window as any;
+      try {
+        const phantom = w.phantom?.solana ?? w.solana;
+        if (phantom?.isPhantom) await phantom.disconnect?.();
+        const solflare = w.solflare;
+        if (solflare?.isSolflare) await solflare.disconnect?.();
+        const backpack = w.backpack?.solana ?? w.xnft?.solana;
+        if (backpack) await backpack.disconnect?.();
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const handleSharePool = useCallback((pool: Pool) => {
     const id = pool.onchainPubkey || pool.id;
